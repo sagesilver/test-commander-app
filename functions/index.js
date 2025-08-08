@@ -176,6 +176,7 @@ exports.createUserAndInvite = functions.region('australia-southeast1').https.onC
   
   console.log('Creating Firestore document with real UID:', userRecord.uid);
   await db.collection('users').doc(userRecord.uid).set(userDoc, { merge: true });
+  
   console.log('Firestore document created successfully');
 
   const response = {

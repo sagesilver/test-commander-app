@@ -32,12 +32,12 @@ service cloud.firestore {
     // Users collection
     match /users/{userId} {
       allow read: if isAppAdmin() || 
-                    (isAuthenticated() && request.auth.uid == userId) ||
+                    (isAuthenticated() && (request.auth.uid == userId || resource.data.email == request.auth.token.email)) ||
                     (isOrgAdmin(resource.data.organisationId));
       allow create: if isAppAdmin() || 
                       (isOrgAdmin(request.resource.data.organisationId));
       allow update: if isAppAdmin() || 
-                      (request.auth.uid == userId) ||
+                      (request.auth.uid == userId || resource.data.email == request.auth.token.email) ||
                       (isOrgAdmin(resource.data.organisationId));
       allow delete: if isAppAdmin() || 
                       (isOrgAdmin(resource.data.organisationId));
