@@ -1,0 +1,16 @@
+{
+  "short_name": "Test Commander",
+  "name": "Test Commander - Test Management Platform",
+  "icons": [
+    {
+      "src": "favicon-32x32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#3762c4",
+  "background_color": "#ffffff"
+}
+

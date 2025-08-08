@@ -1,0 +1,53 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function getUserData() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) ? 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data : 
+             null;
+    }
+    
+    function isAppAdmin() {
+      let userData = getUserData();
+      return userData != null && userData.roles.hasAny(['APP_ADMIN']);
+    }
+    
+    function isOrgAdmin(organizationId) {
+      let userData = getUserData();
+      return userData != null && 
+             userData.organisationId == organizationId && 
+             userData.roles.hasAny(['ORG_ADMIN']);
+    }
+    
+    function isOrgMember(organizationId) {
+      let userData = getUserData();
+      return userData != null && userData.organisationId == organizationId;
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow read: if isAppAdmin() || 
+                    (isAuthenticated() && request.auth.uid == userId) ||
+                    (isOrgAdmin(resource.data.organisationId));
+      allow create: if isAppAdmin() || 
+                      (isOrgAdmin(request.resource.data.organisationId));
+      allow update: if isAppAdmin() || 
+                      (request.auth.uid == userId) ||
+                      (isOrgAdmin(resource.data.organisationId));
+      allow delete: if isAppAdmin() || 
+                      (isOrgAdmin(resource.data.organisationId));
+    }
+
+    // Organizations collection
+    match /organizations/{organizationId} {
+      allow read: if isAppAdmin() || isOrgMember(organizationId);
+      allow create: if isAppAdmin();
+      allow update, delete: if isAppAdmin() || isOrgAdmin(organizationId);
+    }
+  }
+}

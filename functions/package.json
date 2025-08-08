@@ -1,0 +1,16 @@
+{
+  "name": "test-commander-functions",
+  "description": "Cloud Functions for Test Commander",
+  "engines": {
+    "node": "18"
+  },
+  "main": "index.js",
+  "license": "MIT",
+  "private": true,
+  "dependencies": {
+    "firebase-admin": "^12.5.0",
+    "firebase-functions": "^4.7.0"
+  }
+}
+
+
