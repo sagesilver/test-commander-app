@@ -173,93 +173,188 @@ const OrganizationList = () => {
   };
 
   const columns = [
-    { id: 'name', header: 'Organization', accessorKey: 'name', size: 200, filterType: 'text', cell: ({ getValue }) => (<span className="text-gray-900">{getValue()}</span>) },
-    { id: 'description', header: 'Description', accessorKey: 'description', size: 300, filterType: 'text', cell: ({ getValue }) => (<span className="text-gray-700">{getValue()}</span>) },
-    { id: 'status', header: 'Status', accessorKey: 'isActive', size: 120, filterType: 'select', cell: ({ getValue }) => (
-      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getValue() ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-800'}`}>
-        {getValue() ? 'Active' : 'Inactive'}
-      </span>
-    ) },
-    { id: 'users', header: 'Users', accessorKey: 'organisationId', size: 100, cell: ({ getValue }) => {
-      const s = stats[getValue()];
-      return <span className="text-gray-700">{s ? `${s.activeUsers}/${s.totalUsers}` : '0/0'}</span>;
-    } },
-    { id: 'projects', header: 'Projects', accessorKey: 'organisationId', size: 100, cell: ({ getValue }) => {
-      const s = stats[getValue()];
-      return <span className="text-gray-700">{s ? `${s.activeProjects}/${s.totalProjects}` : '0/0'}</span>;
-    } },
-    { id: 'subscription', header: 'Plan', accessorKey: 'subscription', size: 120, filterType: 'select', cell: ({ getValue }) => (
-      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">{getSubscriptionPlanLabel(getValue()?.plan)}</span>
-    ) },
-    { id: 'actions', header: 'Actions', size: 200, enableSorting: false, enableColumnFilter: false, cell: ({ row }) => (
-      <div>
-        <button className="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded" title="View Details" onClick={() => handleView(row.original)}>
-          <Eye />
-        </button>
-        <button className="p-1 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded" title="Edit Organization" onClick={() => handleEdit(row.original)}>
-          <Edit />
-        </button>
-        {row.original.isActive ? (
-          <button className="p-1 text-gray-600 hover:text-amber-600 hover:bg-amber-50 rounded" title="Deactivate Organization" onClick={() => handleDelete(row.original)}>
-            <Trash2 />
+    {
+      id: 'name',
+      header: 'Organization',
+      accessorKey: 'name',
+      size: 220,
+      filterType: 'text',
+      cell: ({ getValue }) => (
+        <span className="text-foreground font-medium truncate" title={getValue()}>{getValue()}</span>
+      ),
+    },
+    {
+      id: 'description',
+      header: 'Description',
+      accessorKey: 'description',
+      size: 320,
+      filterType: 'text',
+      cell: ({ getValue }) => (
+        <span className="text-menu truncate" title={getValue()}>{getValue()}</span>
+      ),
+    },
+    {
+      id: 'status',
+      header: 'Status',
+      accessorKey: 'isActive',
+      size: 120,
+      filterType: 'select',
+      cell: ({ getValue }) => (
+        <span
+          className={`inline-flex items-center h-7 px-2 rounded-full text-sm font-medium ${
+            getValue()
+              ? 'bg-green-900/20 text-green-400'
+              : 'bg-red-900/20 text-red-400'
+          }`}
+        >
+          {getValue() ? 'Active' : 'Inactive'}
+        </span>
+      ),
+    },
+    {
+      id: 'users',
+      header: 'Users',
+      accessorKey: 'organisationId',
+      size: 110,
+      cell: ({ getValue }) => {
+        const s = stats[getValue()];
+        return <span className="text-menu">{s ? `${s.activeUsers}/${s.totalUsers}` : '0/0'}</span>;
+      },
+    },
+    {
+      id: 'projects',
+      header: 'Projects',
+      accessorKey: 'organisationId',
+      size: 110,
+      cell: ({ getValue }) => {
+        const s = stats[getValue()];
+        return <span className="text-menu">{s ? `${s.activeProjects}/${s.totalProjects}` : '0/0'}</span>;
+      },
+    },
+    {
+      id: 'subscription',
+      header: 'Plan',
+      accessorKey: 'subscription.plan',
+      size: 140,
+      filterType: 'select',
+      cell: ({ getValue }) => {
+        const value = (getValue() || 'free').toLowerCase();
+        const classes =
+          value === 'enterprise'
+            ? 'bg-[rgb(var(--tc-icon))]/20 text-[rgb(var(--tc-contrast))]'
+            : value === 'premium'
+            ? 'bg-purple-900/20 text-purple-300'
+            : value === 'basic' || value === 'free'
+            ? 'bg-white/5 text-menu'
+            : 'bg-white/5 text-menu';
+        return (
+          <span className={`inline-flex items-center h-7 px-2 rounded-full text-sm font-medium ${classes}`}>
+            {getSubscriptionPlanLabel(value)}
+          </span>
+        );
+      },
+    },
+    {
+      id: 'actions',
+      header: 'Actions',
+      size: 200,
+      enableSorting: false,
+      enableColumnFilter: false,
+      cell: ({ row }) => (
+        <div className="h-full flex items-center space-x-1">
+          <button
+            className="p-1.5 text-menu hover:text-white hover:bg-white/10 rounded transition-all duration-200"
+            title="View Details"
+            onClick={() => handleView(row.original)}
+          >
+            <Eye className="w-4 h-4" />
           </button>
-        ) : (
-          <button className="p-1 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded" title="Reactivate Organization" onClick={() => handleRestore(row.original)}>
-            <Plus />
+          <button
+            className="p-1.5 text-menu hover:text-white hover:bg-white/10 rounded transition-all duration-200"
+            title="Edit Organization"
+            onClick={() => handleEdit(row.original)}
+          >
+            <Edit className="w-4 h-4" />
           </button>
-        )}
-      </div>
-    ) },
+          {row.original.isActive ? (
+            <button
+              className="p-1.5 text-menu hover:text-red-300 hover:bg-red-900/20 rounded transition-all duration-200"
+              title="Deactivate Organization"
+              onClick={() => handleDelete(row.original)}
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          ) : (
+            <button
+              className="p-1.5 text-menu hover:text-white hover:bg-white/10 rounded transition-all duration-200"
+              title="Reactivate Organization"
+              onClick={() => handleRestore(row.original)}
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      ),
+    },
   ];
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-semibold">Organizations</h1>
-        {currentUserData?.roles.includes('APP_ADMIN') && (
-          <button
-            onClick={handleCreate}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            title="Create Organization"
-          >
-            <Plus />
-            <span>Create Organization</span>
-          </button>
-        )}
+      <div className="bg-card rounded-lg shadow-lg border border-subtle">
+        <div className="flex items-center justify-between p-4 bg-surface-muted border-b border-subtle">
+          <div className="flex items-center space-x-4">
+            <h3 className="text-lg font-semibold text-foreground">Organizations</h3>
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-[rgb(var(--tc-icon))]/20 text-[rgb(var(--tc-contrast))]">
+              {organizations.length} total
+            </span>
+          </div>
+          {currentUserData?.roles.includes('APP_ADMIN') && (
+            <button
+              onClick={handleCreate}
+              className="btn-primary flex items-center space-x-2"
+              title="Create Organization"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Create Organization</span>
+            </button>
+          )}
+        </div>
+        <div className="w-full">
+          <DataTable
+            data={organizations}
+            columns={columns}
+            defaultPageSize={10}
+            pageSizeOptions={[10, 25, 50]}
+            emptyMessage={loading ? 'Loading…' : 'No organizations'}
+            className="text-foreground"
+          />
+        </div>
       </div>
-      
-      <DataTable
-        data={organizations}
-        columns={columns}
-        defaultPageSize={10}
-        pageSizeOptions={[10, 25, 50]}
-        emptyMessage={loading ? 'Loading…' : 'No organizations'}
-      />
 
       {/* View Organization Modal */}
       {viewOpen && selectedOrganization && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-card border border-subtle rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto">
             {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <div className="flex items-center justify-between p-6 bg-surface-muted border-b border-subtle">
               <div className="flex items-center space-x-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Building className="h-6 w-6 text-blue-600" />
+                <div className="p-2 bg-white/10 rounded-lg">
+                  <Building className="h-6 w-6 text-[rgb(var(--tc-icon))]" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-900">
+                  <h2 className="text-xl font-semibold text-foreground">
                     {selectedOrganization.name}
                   </h2>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-menu">
                     Organization details and settings
                   </p>
                 </div>
               </div>
               <button
                 onClick={handleViewClose}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
               >
-                <XCircle className="h-6 w-6 text-gray-400" />
+                <XCircle className="h-6 w-6 text-menu" />
               </button>
             </div>
 
@@ -267,24 +362,24 @@ const OrganizationList = () => {
               {/* Basic Information */}
               <div className="space-y-6">
                 <div className="flex items-center space-x-2">
-                  <Building className="h-5 w-5 text-gray-400" />
-                  <h3 className="text-lg font-medium text-gray-900">Basic Information</h3>
+                  <Building className="h-5 w-5 text-[rgb(var(--tc-icon))]" />
+                  <h3 className="text-lg font-medium text-foreground">Basic Information</h3>
                 </div>
                 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                       Description
                     </label>
-                    <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">
+                      <div className="px-4 py-3 bg-surface-muted border border-subtle rounded-lg text-foreground view-field">
                       {selectedOrganization.description || 'Not specified'}
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                       Industry
                     </label>
-                    <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">
+                      <div className="px-4 py-3 bg-surface-muted border border-subtle rounded-lg text-foreground view-field">
                       {selectedOrganization.metadata?.industry || 'Not specified'}
                     </div>
                   </div>
@@ -294,38 +389,38 @@ const OrganizationList = () => {
               {/* Contact Information */}
               <div className="space-y-6">
                 <div className="flex items-center space-x-2">
-                  <Email className="h-5 w-5 text-gray-400" />
-                  <h3 className="text-lg font-medium text-gray-900">Contact Information</h3>
+                  <Email className="h-5 w-5 text-[rgb(var(--tc-icon))]" />
+                  <h3 className="text-lg font-medium text-foreground">Contact Information</h3>
                 </div>
                 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                       Email
                     </label>
-                    <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">
+                    <div className="px-4 py-3 bg-surface-muted border border-subtle rounded-lg text-foreground view-field">
                       {selectedOrganization.contactInfo?.email || 'Not specified'}
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                       Phone
                     </label>
-                    <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">
+                    <div className="px-4 py-3 bg-surface-muted border border-subtle rounded-lg text-foreground view-field">
                       {selectedOrganization.contactInfo?.phone || 'Not specified'}
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                       Website
                     </label>
-                    <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">
+                    <div className="px-4 py-3 bg-surface-muted border border-subtle rounded-lg text-foreground view-field">
                       {selectedOrganization.contactInfo?.website ? (
                         <a 
                           href={selectedOrganization.contactInfo.website} 
                           target="_blank" 
                           rel="noopener noreferrer"
-                          className="text-blue-600 hover:text-blue-800 underline"
+                           className="text-[rgb(var(--tc-contrast))] hover:brightness-110 underline"
                         >
                           {selectedOrganization.contactInfo.website}
                         </a>
@@ -333,10 +428,10 @@ const OrganizationList = () => {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                       Address
                     </label>
-                    <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">
+                    <div className="px-4 py-3 bg-surface-muted border border-subtle rounded-lg text-foreground view-field">
                       {selectedOrganization.contactInfo?.address || 'Not specified'}
                     </div>
                   </div>
@@ -346,32 +441,32 @@ const OrganizationList = () => {
               {/* Organization Settings */}
               <div className="space-y-6">
                 <div className="flex items-center space-x-2">
-                  <Settings className="h-5 w-5 text-gray-400" />
-                  <h3 className="text-lg font-medium text-gray-900">Organization Settings</h3>
+                  <Settings className="h-5 w-5 text-[rgb(var(--tc-icon))]" />
+                  <h3 className="text-lg font-medium text-foreground">Organization Settings</h3>
                 </div>
                 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                       Default User Role
                     </label>
-                    <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">
+                    <div className="px-4 py-3 bg-surface-muted border border-subtle rounded-lg text-foreground view-field">
                       {selectedOrganization.settings?.defaultUserRole || 'Not set'}
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                       Max Users
                     </label>
-                    <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">
+                    <div className="px-4 py-3 bg-surface-muted border border-subtle rounded-lg text-foreground view-field">
                       {selectedOrganization.settings?.maxUsers || 'Not set'}
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                       Max Projects
                     </label>
-                    <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">
+                    <div className="px-4 py-3 bg-surface-muted border border-subtle rounded-lg text-foreground view-field">
                       {selectedOrganization.settings?.maxProjects || 'Not set'}
                     </div>
                   </div>
@@ -381,22 +476,22 @@ const OrganizationList = () => {
               {/* Branding & Customization */}
               <div className="space-y-6">
                 <div className="flex items-center space-x-2">
-                  <Palette className="h-5 w-5 text-gray-400" />
-                  <h3 className="text-lg font-medium text-gray-900">Branding & Customization</h3>
+                  <Palette className="h-5 w-5 text-[rgb(var(--tc-icon))]" />
+                  <h3 className="text-lg font-medium text-foreground">Branding & Customization</h3>
                 </div>
                 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                       Logo URL
                     </label>
-                    <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">
+                    <div className="px-4 py-3 bg-surface-muted border border-subtle rounded-lg text-foreground view-field">
                       {selectedOrganization.settings?.branding?.logo ? (
                         <a 
                           href={selectedOrganization.settings.branding.logo} 
                           target="_blank" 
                           rel="noopener noreferrer"
-                          className="text-blue-600 hover:text-blue-800 underline"
+                          className="text-[rgb(var(--tc-contrast))] hover:brightness-110 underline"
                         >
                           {selectedOrganization.settings.branding.logo}
                         </a>
@@ -404,15 +499,15 @@ const OrganizationList = () => {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                       Primary Color
                     </label>
-                    <div className="flex items-center space-x-3 px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg">
+                    <div className="flex items-center space-x-3 px-4 py-3 bg-surface-muted border border-subtle rounded-lg view-field">
                       <div 
-                        className="w-6 h-6 rounded border border-gray-300"
+                        className="w-6 h-6 rounded border border-subtle"
                         style={{ backgroundColor: selectedOrganization.settings?.branding?.primaryColor || '#3762c4' }}
                       />
-                      <span className="text-gray-900 font-mono text-sm">
+                      <span className="text-foreground font-mono text-sm">
                         {selectedOrganization.settings?.branding?.primaryColor || '#3762c4'}
                       </span>
                     </div>
@@ -423,32 +518,32 @@ const OrganizationList = () => {
               {/* Organization Details */}
               <div className="space-y-6">
                 <div className="flex items-center space-x-2">
-                  <Building className="h-5 w-5 text-gray-400" />
-                  <h3 className="text-lg font-medium text-gray-900">Organization Details</h3>
+                  <Building className="h-5 w-5 text-[rgb(var(--tc-icon))]" />
+                  <h3 className="text-lg font-medium text-foreground">Organization Details</h3>
                 </div>
                 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                       Size
                     </label>
-                    <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">
+                    <div className="px-4 py-3 bg-surface-muted border border-subtle rounded-lg text-foreground view-field">
                       {getOrganizationSizeLabel(selectedOrganization.metadata?.size)}
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                       Region
                     </label>
-                    <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">
+                    <div className="px-4 py-3 bg-surface-muted border border-subtle rounded-lg text-foreground view-field">
                       {selectedOrganization.metadata?.region || 'Not specified'}
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                       Timezone
                     </label>
-                    <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">
+                    <div className="px-4 py-3 bg-surface-muted border border-subtle rounded-lg text-foreground view-field">
                       {selectedOrganization.metadata?.timezone || 'UTC'}
                     </div>
                   </div>
@@ -458,58 +553,58 @@ const OrganizationList = () => {
               {/* Subscription */}
               <div className="space-y-6">
                 <div className="flex items-center space-x-2">
-                  <CreditCard className="h-5 w-5 text-gray-400" />
-                  <h3 className="text-lg font-medium text-gray-900">Subscription</h3>
+                  <CreditCard className="h-5 w-5 text-[rgb(var(--tc-icon))]" />
+                  <h3 className="text-lg font-medium text-foreground">Subscription</h3>
                 </div>
                 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                       Plan
                     </label>
-                    <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                    <div className="px-4 py-3 bg-surface-muted border border-subtle rounded-lg view-field">
+                      <span className="inline-flex items-center h-7 px-2 rounded-full text-sm font-medium bg-white/5 text-menu">
                         {getSubscriptionPlanLabel(selectedOrganization.subscription?.plan)}
                       </span>
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                       User Limit
                     </label>
-                    <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">
+                    <div className="px-4 py-3 bg-surface-muted border border-subtle rounded-lg text-foreground view-field">
                       {selectedOrganization.subscription?.limits?.users || 'Not set'}
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                       Project Limit
                     </label>
-                    <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">
+                    <div className="px-4 py-3 bg-surface-muted border border-subtle rounded-lg text-foreground view-field">
                       {selectedOrganization.subscription?.limits?.projects || 'Not set'}
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                       Storage Limit
                     </label>
-                    <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">
+                    <div className="px-4 py-3 bg-surface-muted border border-subtle rounded-lg text-foreground view-field">
                       {selectedOrganization.subscription?.limits?.storage || 'Not set'} GB
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                       Start Date
                     </label>
-                    <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">
+                    <div className="px-4 py-3 bg-surface-muted border border-subtle rounded-lg text-foreground view-field">
                       {formatDate(selectedOrganization.subscription?.startDate)}
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                       End Date
                     </label>
-                    <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">
+                    <div className="px-4 py-3 bg-surface-muted border border-subtle rounded-lg text-foreground view-field">
                       {formatDate(selectedOrganization.subscription?.endDate)}
                     </div>
                   </div>
@@ -519,19 +614,19 @@ const OrganizationList = () => {
               {/* Status */}
               <div className="space-y-6">
                 <div className="flex items-center space-x-2">
-                  <CheckCircle className="h-5 w-5 text-gray-400" />
-                  <h3 className="text-lg font-medium text-gray-900">Status</h3>
+                  <CheckCircle className="h-5 w-5 text-[rgb(var(--tc-icon))]" />
+                  <h3 className="text-lg font-medium text-foreground">Status</h3>
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Organization Status
                   </label>
-                  <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  <div className="px-4 py-3 bg-surface-muted border border-subtle rounded-lg">
+                    <span className={`inline-flex items-center h-7 px-2 rounded-full text-sm font-medium ${
                       selectedOrganization.isActive 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-red-100 text-red-800'
+                        ? 'bg-green-900/20 text-green-400' 
+                        : 'bg-red-900/20 text-red-400'
                     }`}>
                       {selectedOrganization.isActive ? 'Active' : 'Inactive'}
                     </span>
@@ -541,11 +636,11 @@ const OrganizationList = () => {
             </div>
 
             {/* Footer Actions */}
-            <div className="flex items-center justify-end space-x-4 p-6 border-t border-gray-200">
+            <div className="flex items-center justify-end space-x-4 p-6 border-t border-subtle">
               <button
                 type="button"
                 onClick={handleViewClose}
-                className="px-6 py-3 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:ring-2 focus:ring-gray-500 focus:border-gray-500 transition-colors"
+                className="px-6 py-3 bg-card text-white border border-subtle rounded-lg hover:bg-surface-muted focus:ring-2 focus:ring-[rgb(var(--tc-contrast))] transition-colors"
               >
                 Close
               </button>
@@ -555,7 +650,7 @@ const OrganizationList = () => {
                   handleViewClose();
                   handleEdit(selectedOrganization);
                 }}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                className="btn-primary"
               >
                 Edit Organization
               </button>

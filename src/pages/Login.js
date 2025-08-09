@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { Eye, EyeOff, Lock, Mail, AlertCircle } from 'lucide-react';
 import { signInWithEmailAndPassword, updatePassword } from 'firebase/auth';
 import { auth } from '../services/firebase';
@@ -19,6 +20,7 @@ const Login = () => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { currentUser, mustChangePassword, setMustChangePassword } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
   // Redirect if already authenticated and doesn't need password change
@@ -241,7 +243,7 @@ const Login = () => {
         className="w-full max-w-md"
       >
         {/* Logo */}
-        <div className="text-center mb-8">
+        <div className="mb-8">
           <div className="w-20 h-20 mx-auto mb-4">
             <img 
               src="/tc-logo-transparent.png" 
@@ -249,8 +251,22 @@ const Login = () => {
               className="w-full h-full object-contain"
             />
           </div>
-          <h1 className="text-3xl font-bold text-foreground">Test Commander</h1>
-          <p className="text-muted mt-2">Sign in to your account</p>
+          <h1 className="text-3xl font-bold text-foreground text-center">Test Commander</h1>
+          <div className="mt-2 w-full flex items-center justify-center gap-2">
+            <p className="text-muted text-center">Sign in to your account</p>
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="p-2 text-menu hover:text-[rgb(var(--tc-icon))] transition-colors rounded-lg"
+              title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            >
+              {theme === 'dark' ? (
+                <span aria-hidden>🌙</span>
+              ) : (
+                <span aria-hidden>☀️</span>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Login Form */}
@@ -316,17 +332,21 @@ const Login = () => {
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
+
+            <div className="text-center mt-3">
+              <button
+                type="button"
+                disabled
+                className="text-sm text-menu hover:text-foreground underline decoration-dotted disabled:opacity-60 cursor-not-allowed"
+                title="Coming soon"
+              >
+                Sign up
+              </button>
+            </div>
           </form>
 
-          {/* Divider (subtle) */}
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-subtle/40"></div>
-            </div>
-          </div>
-
-          {/* Google Sign In Button - App Admin Only */}
-          <div className="mt-10">
+          {/* Google Sign In Button */}
+          <div className="mt-3">
             <button
               type="button"
               onClick={handleGoogleSignIn}
@@ -345,6 +365,14 @@ const Login = () => {
             )}
             {loading ? 'Signing in...' : 'Sign in with Google'}
             </button>
+            <div className="text-center mt-3">
+              <button
+                type="button"
+                className="text-sm text-menu hover:text-foreground underline decoration-dotted"
+              >
+                Forgot password?
+              </button>
+            </div>
           </div>
         </div>
 

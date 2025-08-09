@@ -9,7 +9,9 @@ const Organizations = () => {
   if (loading || !currentUser) {
     return (
       <div className="p-6">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+        <div className="flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[rgb(var(--tc-icon))]"></div>
+        </div>
       </div>
     );
   }
@@ -18,10 +20,10 @@ const Organizations = () => {
   if (!currentUserData?.roles?.includes('APP_ADMIN')) {
     return (
       <div className="p-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <h2 className="text-red-800 font-semibold">Access Denied</h2>
-          <p className="text-red-600">You don't have permission to access organization management.</p>
-          <p className="text-red-600 mt-2">Current user roles: {currentUserData?.roles?.join(', ') || 'None'}</p>
+        <div className="bg-card border border-subtle rounded-lg p-4">
+          <h2 className="text-foreground font-semibold">Access Denied</h2>
+          <p className="text-menu">You don't have permission to access organization management.</p>
+          <p className="text-red-400 mt-2">Current user roles: {currentUserData?.roles?.join(', ') || 'None'}</p>
         </div>
       </div>
     );

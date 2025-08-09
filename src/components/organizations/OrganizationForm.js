@@ -2,22 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { organizationService } from '../../services/organizationService';
 import { 
-  BuildingOffice2Icon, 
-  EnvelopeIcon, 
-  PhoneIcon, 
-  GlobeAltIcon, 
-  MapPinIcon,
-  UserIcon,
-  CogIcon,
-  CreditCardIcon,
-  CheckCircleIcon,
-  XCircleIcon,
-  PhotoIcon,
-  SwatchIcon,
-  CodeBracketIcon,
-  UsersIcon,
-  FolderIcon
-} from '@heroicons/react/24/outline';
+  Building as BuildingOffice2Icon,
+  Mail as EnvelopeIcon,
+  Phone as PhoneIcon,
+  Globe as GlobeAltIcon,
+  MapPin as MapPinIcon,
+  User as UserIcon,
+  Cog as CogIcon,
+  CreditCard as CreditCardIcon,
+  CheckCircle as CheckCircleIcon,
+  XCircle as XCircleIcon,
+  Image as PhotoIcon,
+  Palette as SwatchIcon,
+  Code2 as CodeBracketIcon,
+  Users as UsersIcon,
+  Folder as FolderIcon
+} from 'lucide-react';
 
 const OrganizationForm = ({ open, onClose, organization = null, onSuccess, isViewMode = false }) => {
   const { currentUserData, createOrganization, updateOrganization } = useAuth();
@@ -319,7 +319,7 @@ const OrganizationForm = ({ open, onClose, organization = null, onSuccess, isVie
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-8">
+        <form onSubmit={handleSubmit} className={`p-6 space-y-8 ${isViewMode ? 'tc-org-view' : organization ? 'tc-org-edit' : 'tc-org-new'}`}>
           {/* Basic Information */}
           <div className="space-y-6">
             <div className="flex items-center space-x-2">

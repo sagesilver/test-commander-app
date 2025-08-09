@@ -88,6 +88,30 @@
   }
   .dark .tc-testcase-new .input-field::placeholder,
   .dark .tc-testcase-new textarea.input-field::placeholder { color: #b3bbc9 !important; opacity: .8; }
+  
+  /* Organization form: match Test Case editable background (#141617) for New/Edit */
+  .dark .tc-org-new .input-field,
+  .dark .tc-org-new select.input-field,
+  .dark .tc-org-new textarea.input-field,
+  .dark .tc-org-edit .input-field,
+  .dark .tc-org-edit select.input-field,
+  .dark .tc-org-edit textarea.input-field {
+    background-color: #141617 !important;
+    color: #b3bbc9 !important;
+  }
+  .dark .tc-org-new .input-field::placeholder,
+  .dark .tc-org-new textarea.input-field::placeholder,
+  .dark .tc-org-edit .input-field::placeholder,
+  .dark .tc-org-edit textarea.input-field::placeholder {
+    color: #b3bbc9 !important;
+    opacity: .8;
+  }
+
+  /* Organization view modal read-only panels */
+  .dark .tc-org-view .view-field {
+    background-color: #141617 !important;
+    color: #b3bbc9 !important;
+  }
   /* Step cards match view field background */
   .dark .tc-testcase-view .step-card { background-color: #141617; }
   .dark .tc-testcase-view .input-field::placeholder,

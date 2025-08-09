@@ -10,11 +10,21 @@ import {
 
 const classNames = (...parts) => parts.filter(Boolean).join(' ');
 
+function getValueByPath(obj, path) {
+  try {
+    return path.split('.').reduce((acc, key) => (acc != null ? acc[key] : undefined), obj);
+  } catch (_) {
+    return undefined;
+  }
+}
+
 function getUniqueValues(data, accessorKey) {
   const set = new Set();
   for (const row of data) {
-    const value = accessorKey in row ? row[accessorKey] : undefined;
-    if (value != null && value !== '') set.add(value);
+    const value = accessorKey.includes('.') ? getValueByPath(row, accessorKey) : row[accessorKey];
+    if (value == null) continue;
+    const isPrimitive = ['string', 'number', 'boolean'].includes(typeof value);
+    if (isPrimitive && value !== '') set.add(value);
   }
   return Array.from(set).sort();
 }
