@@ -29,6 +29,7 @@ import {
   Zap
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 
 const Navigation = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -36,6 +37,7 @@ const Navigation = () => {
   const [expandedSections, setExpandedSections] = useState(['main']);
   const location = useLocation();
   const { currentUser, currentUserData, currentOrganization, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   // Role-based menu configuration
   const getMenuItems = (role) => {
@@ -145,7 +147,7 @@ const Navigation = () => {
   return (
     <>
       {/* Top Navigation Bar */}
-      <nav className="bg-white shadow-card">
+      <nav className="bg-card shadow-card">
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center h-16">
             {/* Logo and Sidebar Toggle */}
@@ -155,7 +157,7 @@ const Navigation = () => {
                 className="p-2 text-slate hover:text-charcoal transition-colors"
                 title="Toggle Sidebar"
               >
-                <Menu className="w-5 h-5" />
+                 <Menu className="w-5 h-5 text-[rgb(var(--tc-icon))]" />
               </button>
               <Link to="/" className="flex items-center space-x-2">
                 <div className="w-8 h-8 flex items-center justify-center">
@@ -165,29 +167,27 @@ const Navigation = () => {
                     className="w-full h-full object-contain"
                   />
                 </div>
-                <span className="text-xl font-semibold text-charcoal">Test Commander</span>
+                <span className="text-xl font-semibold text-foreground">Test Commander</span>
               </Link>
             </div>
 
             {/* Organization Context (for non-super users) */}
             {currentOrganization && (
-              <div className="hidden md:flex items-center space-x-2 bg-blue-50 px-3 py-1 rounded-lg">
-                <Building className="w-4 h-4 text-blue-600" />
-                <span className="text-sm font-medium text-blue-800">{currentOrganization.name}</span>
+              <div className="hidden md:flex items-center space-x-2 bg-surface-muted px-3 py-1 rounded-lg">
+                <Building className="w-4 h-4 text-[rgb(var(--tc-icon))]" />
+                <span className="text-sm font-medium text-foreground">{currentOrganization.name}</span>
               </div>
             )}
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-1">
               {navItems.map((item) => {
-                const Icon = item.icon;
                 return (
                   <Link
                     key={item.path}
                     to={item.path}
                     className={`nav-link ${isActive(item.path) ? 'nav-link-active' : ''}`}
                   >
-                    <Icon className="w-4 h-4 mr-2" />
                     {item.label}
                   </Link>
                 );
@@ -197,7 +197,19 @@ const Navigation = () => {
             {/* User Menu */}
             <div className="hidden md:flex items-center space-x-4">
               {currentUser && (
-                <div className="flex items-center space-x-3 bg-white rounded-lg px-3 py-2 shadow-sm border border-gray-100">
+                <div className="flex items-center space-x-3">
+                  {/* Theme toggle */}
+                  <button
+                    onClick={toggleTheme}
+                    className="p-2 text-menu hover:text-[rgb(var(--tc-icon))] transition-colors"
+                    title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+                  >
+                    {theme === 'dark' ? (
+                      <span aria-hidden>🌙</span>
+                    ) : (
+                      <span aria-hidden>☀️</span>
+                    )}
+                  </button>
                   <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-semibold">
                     {currentUserData?.name ? 
                       currentUserData.name.split(' ').map(n => n[0]).join('').toUpperCase() :
@@ -207,19 +219,20 @@ const Navigation = () => {
                     }
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-sm font-medium text-charcoal">
+                    <span className="text-sm font-medium text-foreground">
                       {currentUserData?.name || currentUser.displayName || currentUser.email || 'User'}
                     </span>
-                    <span className="text-xs text-slate">
+                    <span className="text-xs text-muted">
                       {currentUserData?.roles?.join(', ') || 'No role assigned'}
                     </span>
                   </div>
                   <button
                     onClick={logout}
-                    className="text-slate hover:text-red-500 transition-colors p-1 rounded"
+                    className="px-3 py-1 rounded-lg bg-surface-muted text-white border border-subtle hover:bg-white/10 hover:border-white/20 transition-colors text-sm flex items-center space-x-2"
                     title="Logout"
                   >
-                    <LogOut className="w-4 h-4" />
+                    <LogOut className="w-4 h-4 text-white" />
+                    <span>Logout</span>
                   </button>
                 </div>
               )}
@@ -293,12 +306,12 @@ const Navigation = () => {
                       </span>
                     </div>
                     </div>
-                    <button
-                      onClick={logout}
-                      className="flex items-center px-4 py-2 text-sm text-slate hover:text-red-500 w-full transition-colors"
+                    <button 
+                      onClick={logout} 
+                      className="w-full text-left px-4 py-2 text-sm rounded-lg bg-surface-muted text-white border border-subtle hover:bg-white/10 hover:border-white/20 transition-colors flex items-center space-x-2"
                     >
-                      <LogOut className="w-4 h-4 mr-3" />
-                      Logout
+                      <LogOut className="w-4 h-4 text-white" />
+                      <span>Logout</span>
                     </button>
                   </div>
                 )}
@@ -309,14 +322,14 @@ const Navigation = () => {
       </nav>
 
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-card shadow-lg transform transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex flex-col h-full">
           {/* Sidebar Header */}
-          <div className="flex items-center justify-between p-4 border-b border-grey-light">
-            <h2 className="text-lg font-semibold text-charcoal">Menu</h2>
+          <div className="flex items-center justify-between p-4 border-b border-subtle">
+            <h2 className="text-lg font-semibold text-foreground">Menu</h2>
             <button
               onClick={() => setIsSidebarOpen(false)}
-              className="p-1 text-slate hover:text-charcoal transition-colors"
+              className="p-1 text-muted hover:text-foreground transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -324,12 +337,12 @@ const Navigation = () => {
 
           {/* Organization Context in Sidebar */}
           {currentOrganization && (
-            <div className="px-4 py-3 bg-blue-50 border-b border-grey-light">
+            <div className="px-4 py-3 bg-surface-muted border-b border-subtle">
               <div className="flex items-center space-x-2">
                 <Building className="w-4 h-4 text-blue-600" />
                 <div>
-                  <p className="text-sm font-medium text-blue-800">{currentOrganization.name}</p>
-                  <p className="text-xs text-blue-600">Current Organization</p>
+                  <p className="text-sm font-medium text-foreground">{currentOrganization.name}</p>
+                  <p className="text-xs text-muted">Current Organization</p>
                 </div>
               </div>
             </div>
@@ -341,7 +354,7 @@ const Navigation = () => {
               <div key={section} className="mb-6">
                 <button
                   onClick={() => toggleSection(section)}
-                  className="flex items-center justify-between w-full px-4 py-2 text-sm font-medium text-charcoal hover:bg-slate-light transition-colors"
+                  className="flex items-center justify-between w-full px-4 py-2 text-sm font-medium text-foreground hover:bg-surface-muted transition-colors"
                 >
                   <span>{sectionLabels[section]}</span>
                   {expandedSections.includes(section) ? (
@@ -364,14 +377,13 @@ const Navigation = () => {
                         <Link
                           key={item.path}
                           to={item.path}
-                          className={`flex items-center px-6 py-2 text-sm transition-colors ${
+                          className={`flex items-center px-4 py-2 text-sm rounded-md transition-colors ${
                             isActive(item.path) 
-                              ? 'text-primary bg-primary-light border-r-2 border-primary' 
-                              : 'text-slate hover:text-primary hover:bg-slate-light'
+                              ? 'text-white bg-white/10' 
+                              : 'text-menu hover:text-white hover:bg-white/10'
                           }`}
                           onClick={() => setIsSidebarOpen(false)}
                         >
-                          <Icon className="w-4 h-4 mr-3" />
                           {item.label}
                         </Link>
                       );
@@ -383,7 +395,7 @@ const Navigation = () => {
           </div>
 
           {/* Sidebar Footer */}
-          <div className="border-t border-grey-light p-4">
+          <div className="border-t border-subtle p-4">
             {currentUser && (
               <div className="flex items-center space-x-3">
                 <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-semibold">
@@ -395,19 +407,27 @@ const Navigation = () => {
                   }
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-charcoal">
+                  <p className="text-sm font-medium text-foreground">
                     {currentUserData?.name || currentUser.displayName || currentUser.email || 'User'}
                   </p>
-                  <p className="text-xs text-slate">
+                  <p className="text-xs text-muted">
                     {currentUserData?.roles?.join(', ') || 'No role assigned'}
                   </p>
                 </div>
                 <button
+                  onClick={toggleTheme}
+                  className="p-2 text-muted hover:text-primary transition-colors"
+                  title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+                >
+                  {theme === 'dark' ? <span aria-hidden>🌙</span> : <span aria-hidden>☀️</span>}
+                </button>
+                <button
                   onClick={logout}
-                  className="p-1 text-slate hover:text-red-500 transition-colors"
+                  className="px-2 py-1 rounded-md bg-surface-muted text-white border border-subtle hover:bg-white/10 hover:border-white/20 transition-colors flex items-center space-x-2"
                   title="Logout"
                 >
-                  <LogOut className="w-4 h-4" />
+                  <LogOut className="w-4 h-4 text-white" />
+                  <span className="text-sm">Logout</span>
                 </button>
               </div>
             )}

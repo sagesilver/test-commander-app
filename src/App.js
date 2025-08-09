@@ -14,6 +14,7 @@ import SuperUserDashboard from './components/SuperUserDashboard';
 import Login from './pages/Login';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import './utils/setupAppAdmin'; // Import to make setup function available globally
 import './utils/verifyDeployment'; // Import to make verification function available globally
 import './utils/resetUserPassword'; // Import to make reset password function available globally
@@ -23,7 +24,7 @@ function AppRoutes() {
   const { currentUser, currentUserData } = useAuth();
 
   return (
-    <div className="min-h-screen bg-slate-light">
+    <div className="min-h-screen bg-surface">
       {currentUser && <Navigation />}
       <main className="container mx-auto px-4 py-8">
         <motion.div
@@ -92,9 +93,11 @@ function AppRoutes() {
 function App() {
   return (
     <AuthProvider>
-      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <AppRoutes />
-      </Router>
+      <ThemeProvider>
+        <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+          <AppRoutes />
+        </Router>
+      </ThemeProvider>
     </AuthProvider>
   );
 }

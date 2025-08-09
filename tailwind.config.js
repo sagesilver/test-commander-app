@@ -1,11 +1,24 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: 'class',
   content: [
     "./src/**/*.{js,jsx,ts,tsx}",
   ],
   theme: {
     extend: {
       colors: {
+        // Theme tokens via CSS variables (supporting opacity)
+        surface: 'rgb(var(--tc-surface) / <alpha-value>)',
+        'surface-muted': 'rgb(var(--tc-surface-muted) / <alpha-value>)',
+        card: 'rgb(var(--tc-card) / <alpha-value>)',
+        foreground: 'rgb(var(--tc-foreground) / <alpha-value>)',
+        muted: 'rgb(var(--tc-muted) / <alpha-value>)',
+        subtle: 'rgb(var(--tc-border-subtle) / <alpha-value>)',
+        icon: 'rgb(var(--tc-icon) / <alpha-value>)',
+        contrast: 'rgb(var(--tc-contrast) / <alpha-value>)',
+        menu: 'rgb(var(--tc-menu) / <alpha-value>)',
+
+        // Existing palette retained for compatibility
         primary: {
           light: '#eaf2fb',
           DEFAULT: '#3762c4',
@@ -42,4 +55,4 @@ module.exports = {
     },
   },
   plugins: [],
-} 
+}

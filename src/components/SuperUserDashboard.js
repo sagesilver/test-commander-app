@@ -121,8 +121,8 @@ const SuperUserDashboard = () => {
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Super User Dashboard</h1>
-        <p className="text-gray-600 mt-2">Welcome, {currentUserData.name}</p>
+        <h1 className="text-3xl font-bold text-foreground">Super User Dashboard</h1>
+        <p className="text-muted mt-2">Welcome, {currentUserData.name}</p>
       </div>
 
       {/* Alert Messages */}
@@ -151,14 +151,14 @@ const SuperUserDashboard = () => {
       <div className="mb-6 flex gap-4">
         <button
           onClick={() => setOpenOrgDialog(true)}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+          className="px-4 py-2 bg-[rgb(var(--tc-icon))] text-white rounded-lg hover:brightness-110 transition-colors flex items-center space-x-2"
         >
           <Plus className="h-4 w-4" />
           <span>Create Organization</span>
         </button>
         <button
           onClick={() => setOpenUserDialog(true)}
-          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
+          className="px-4 py-2 bg-surface-muted text-white border border-subtle rounded-lg hover:bg-white/10 hover:border-white/20 transition-colors flex items-center space-x-2"
         >
           <Users className="h-4 w-4" />
           <span>Add User</span>
@@ -166,20 +166,20 @@ const SuperUserDashboard = () => {
       </div>
 
       {/* Organizations Section */}
-      <div className="bg-white rounded-xl shadow-lg p-6">
+      <div className="bg-card rounded-xl shadow-lg p-6 border border-subtle">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-2">
-            <Building className="h-6 w-6 text-blue-600" />
-            <h2 className="text-xl font-semibold text-gray-900">Organizations</h2>
-            <span className="text-sm text-gray-500">({organizations.length} total)</span>
+            <Building className="h-6 w-6 text-[rgb(var(--tc-icon))]" />
+            <h2 className="text-xl font-semibold text-foreground">Organizations</h2>
+            <span className="text-sm text-muted">({organizations.length} total)</span>
           </div>
         </div>
 
         {/* Organization Panels Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {organizations.length === 0 ? (
-            <div className="col-span-full text-center py-8 text-gray-500">
-              <Building className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+            <div className="col-span-full text-center py-8 text-muted">
+              <Building className="h-12 w-12 mx-auto mb-4 text-menu" />
               <p>No organizations found</p>
               <p className="text-sm">Create your first organization to get started</p>
             </div>

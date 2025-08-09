@@ -1,4 +1,4 @@
-# Test Commander: Form Design Specification
+# Test Commander: Form Design Specification (Unified)
 
 ## 1. Overview
 
@@ -39,7 +39,7 @@ This document defines the consistent design system for all forms within the Test
 ### 3.1 Modal Container
 ```html
 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-  <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+  <div className="bg-card border border-subtle rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
     <!-- Form content -->
   </div>
 </div>
@@ -47,25 +47,22 @@ This document defines the consistent design system for all forms within the Test
 
 ### 3.2 Header Section
 ```html
-<div className="flex items-center justify-between p-6 border-b border-gray-200">
+<div className="flex items-center justify-between p-6 border-b border-subtle">
   <div className="flex items-center space-x-3">
-    <div className="p-2 bg-blue-100 rounded-lg">
-      <Icon className="h-6 w-6 text-blue-600" />
+    <div className="p-2 bg-white/10 rounded-lg">
+      <Icon className="h-6 w-6 text-[rgb(var(--tc-icon))]" />
     </div>
     <div>
-      <h2 className="text-xl font-semibold text-gray-900">
+      <h2 className="text-xl font-semibold text-foreground">
         Form Title
       </h2>
-      <p className="text-sm text-gray-500">
+      <p className="text-sm text-muted">
         Form description or instructions
       </p>
     </div>
   </div>
-  <button
-    onClick={onClose}
-    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-  >
-    <XCircleIcon className="h-6 w-6 text-gray-400" />
+  <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
+    <XCircleIcon className="h-6 w-6 text-menu" />
   </button>
 </div>
 ```
@@ -84,9 +81,9 @@ This document defines the consistent design system for all forms within the Test
 ### 4.1 Section Header
 ```html
 <div className="space-y-6">
-  <div className="flex items-center space-x-2">
-    <Icon className="h-5 w-5 text-gray-400" />
-    <h3 className="text-lg font-medium text-gray-900">Section Title</h3>
+  <div className="flex items-center gap-2">
+    <Icon className="h-5 w-5 text-[rgb(var(--tc-icon))]" />
+    <h3 className="text-lg font-medium text-foreground">Section Title</h3>
   </div>
   <!-- Section content -->
 </div>
@@ -101,21 +98,29 @@ This document defines the consistent design system for all forms within the Test
 
 ---
 
-## 5. Input Field Specifications
+## 5. Input Field Specifications (Dark mode)
+
+- Test Case forms (New/Edit/View) use a consistent, high-contrast input style:
+  - Background: `#141617`
+  - Text: `#b3bbc9`
+  - Radius: `rounded-lg`
+  - Applied via wrapper classes:
+    - New: `.tc-testcase-new .input-field`
+    - Edit: `.tc-testcase-edit .input-field`
+    - View (read-only): `.tc-testcase-view .input-field` (disabled)
+
 
 ### 5.1 Text Input
 ```html
 <div>
-  <label className="block text-sm font-medium text-gray-700 mb-2">
+  <label className="block text-sm font-medium text-foreground mb-2">
     Field Label *
   </label>
   <input
     type="text"
     value={value}
     onChange={(e) => handleChange(e.target.value)}
-    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-      error ? 'border-red-300' : 'border-gray-300'
-    }`}
+    className={`input-field ${error ? 'border-red-400' : ''}`}
     placeholder="Placeholder text"
   />
   {error && (
@@ -130,7 +135,7 @@ This document defines the consistent design system for all forms within the Test
 ### 5.2 Icon-Enhanced Input
 ```html
 <div>
-  <label className="block text-sm font-medium text-gray-700 mb-2">
+  <label className="block text-sm font-medium text-foreground mb-2">
     Field Label
   </label>
   <div className="relative">
@@ -139,7 +144,7 @@ This document defines the consistent design system for all forms within the Test
       type="text"
       value={value}
       onChange={(e) => handleChange(e.target.value)}
-      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+    className="input-field pl-10 pr-4"
       placeholder="Placeholder text"
     />
   </div>
@@ -149,16 +154,14 @@ This document defines the consistent design system for all forms within the Test
 ### 5.3 Textarea
 ```html
 <div>
-  <label className="block text-sm font-medium text-gray-700 mb-2">
+  <label className="block text-sm font-medium text-foreground mb-2">
     Description *
   </label>
   <textarea
     value={value}
     onChange={(e) => handleChange(e.target.value)}
     rows={3}
-    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-      error ? 'border-red-300' : 'border-gray-300'
-    }`}
+    className={`input-field ${error ? 'border-red-400' : ''}`}
     placeholder="Describe your content"
   />
   {error && (
@@ -173,13 +176,13 @@ This document defines the consistent design system for all forms within the Test
 ### 5.4 Select Dropdown
 ```html
 <div>
-  <label className="block text-sm font-medium text-gray-700 mb-2">
+  <label className="block text-sm font-medium text-foreground mb-2">
     Selection Field
   </label>
   <select
     value={value}
     onChange={(e) => handleChange(e.target.value)}
-    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+    className="input-field"
   >
     {options.map(option => (
       <option key={option.value} value={option.value}>
@@ -192,12 +195,12 @@ This document defines the consistent design system for all forms within the Test
 
 ### 5.5 Toggle Switch
 ```html
-<div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+<div className="flex items-center justify-between p-4 bg-surface-muted rounded-lg border border-subtle">
   <div className="flex items-center space-x-3">
-    <CogIcon className="h-5 w-5 text-gray-400" />
+    <CogIcon className="h-5 w-5 text-[rgb(var(--tc-icon))]" />
     <div>
-      <h4 className="font-medium text-gray-900">Toggle Label</h4>
-      <p className="text-sm text-gray-500">
+      <h4 className="font-medium text-foreground">Toggle Label</h4>
+      <p className="text-sm text-menu">
         Toggle description
       </p>
     </div>
@@ -216,26 +219,26 @@ This document defines the consistent design system for all forms within the Test
 
 ### 5.6 Card Selection
 ```html
-<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
   {options.map(option => (
     <div
       key={option.value}
-      className={`relative p-4 border-2 rounded-lg cursor-pointer transition-all ${
+      className={`relative p-4 border rounded-lg cursor-pointer transition-all ${
         selectedValue === option.value
-          ? 'border-blue-500 bg-blue-50'
-          : 'border-gray-200 hover:border-gray-300'
+          ? 'border-[rgb(var(--tc-icon))] bg-white/5'
+          : 'border-subtle hover:bg-white/5'
       }`}
       onClick={() => handleChange(option.value)}
     >
       {selectedValue === option.value && (
-        <CheckCircleIcon className="absolute top-2 right-2 h-5 w-5 text-blue-500" />
+        <CheckCircleIcon className="absolute top-2 right-2 h-5 w-5 text-[rgb(var(--tc-icon))]" />
       )}
       <div className="text-center">
-        <h4 className="font-semibold text-gray-900">{option.label}</h4>
-        <ul className="mt-2 text-xs text-gray-600 space-y-1">
+        <h4 className="font-semibold text-foreground">{option.label}</h4>
+        <ul className="mt-2 text-xs text-menu space-y-1">
           {option.features.map((feature, index) => (
             <li key={index} className="flex items-center justify-center">
-              <CheckCircleIcon className="h-3 w-3 text-green-500 mr-1" />
+              <CheckCircleIcon className="h-3 w-3 text-green-400 mr-1" />
               {feature}
             </li>
           ))}
@@ -248,7 +251,7 @@ This document defines the consistent design system for all forms within the Test
 
 ---
 
-## 6. Color Scheme
+## 6. Color Scheme (Tokens)
 
 ### 6.1 Primary Colors
 - **Primary Blue**: `#3762c4` (blue-600)
@@ -262,10 +265,10 @@ This document defines the consistent design system for all forms within the Test
 - **Info**: `#3b82f6` (blue-500)
 
 ### 6.3 Neutral Colors
-- **Text Primary**: `#111827` (gray-900)
-- **Text Secondary**: `#6b7280` (gray-500)
-- **Border**: `#d1d5db` (gray-300)
-- **Background**: `#f9fafb` (gray-50)
+- **Text Primary**: `text-foreground`
+- **Text Secondary**: `text-menu`
+- **Border Subtle**: `border-subtle`
+- **Background (dark)**: tokens `surface`, `card`, `surface-muted`
 
 ---
 
@@ -488,7 +491,7 @@ This document defines the consistent design system for all forms within the Test
 
 ## 17. Example Implementation
 
-See `src/components/organizations/OrganizationForm.js` for a complete implementation example that follows all these specifications.
+See `src/components/organizations/OrganizationForm.js` and test case modals in `src/pages/TestCases.js`.
 
 ---
 

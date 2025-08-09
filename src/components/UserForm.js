@@ -230,27 +230,27 @@ const UserForm = ({ isOpen, onClose, onSuccess }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+      <div className="bg-card border border-subtle rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+        <div className="flex items-center justify-between p-6 border-b border-subtle">
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <UserPlus className="h-6 w-6 text-blue-600" />
+            <div className="p-2 bg-white/10 rounded-lg">
+              <UserPlus className="h-6 w-6 text-[rgb(var(--tc-icon))]" />
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">
+              <h2 className="text-xl font-semibold text-foreground">
                 Add New User
               </h2>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-muted">
                 Create a new user account with appropriate roles and permissions
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
           >
-            <XCircle className="h-6 w-6 text-gray-400" />
+            <XCircle className="h-6 w-6 text-menu" />
           </button>
         </div>
 
@@ -260,8 +260,8 @@ const UserForm = ({ isOpen, onClose, onSuccess }) => {
           {message.text && (
             <div className={`p-4 rounded-lg flex items-center space-x-2 ${
               message.type === 'success' 
-                ? 'bg-green-50 text-green-800 border border-green-200' 
-                : 'bg-red-50 text-red-800 border border-red-200'
+                ? 'bg-green-900/20 text-green-300 border border-green-700' 
+                : 'bg-red-900/20 text-red-300 border border-red-700'
             }`}>
               {message.type === 'success' ? (
                 <CheckCircle className="h-5 w-5" />
@@ -277,22 +277,20 @@ const UserForm = ({ isOpen, onClose, onSuccess }) => {
         {/* Basic Information Section */}
           <div className="space-y-6">
             <div className="flex items-center space-x-2">
-              <User className="h-5 w-5 text-gray-400" />
-              <h3 className="text-lg font-medium text-gray-900">Basic Information</h3>
+              <User className="h-5 w-5 text-[rgb(var(--tc-icon))]" />
+              <h3 className="text-lg font-medium text-foreground">Basic Information</h3>
             </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   Full Name *
                 </label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => handleInputChange('name', e.target.value)}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                    errors.name ? 'border-red-300' : 'border-gray-300'
-                  }`}
+                  className={`input-field ${errors.name ? 'border-red-400' : ''}`}
                   placeholder="Enter full name"
                 />
                 {errors.name && (
@@ -304,18 +302,16 @@ const UserForm = ({ isOpen, onClose, onSuccess }) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   Email Address *
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-[rgb(var(--tc-icon))]" />
                   <input
                     type="email"
                     value={formData.email}
                     onChange={(e) => handleInputChange('email', e.target.value)}
-                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                      errors.email ? 'border-red-300' : 'border-gray-300'
-                    }`}
+                  className={`input-field pl-10 pr-4 ${errors.email ? 'border-red-400' : ''}`}
                     placeholder="user@example.com"
                   />
                 </div>
@@ -330,12 +326,12 @@ const UserForm = ({ isOpen, onClose, onSuccess }) => {
           </div>
 
           {/* Authentication Notice */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="bg-surface-muted border border-subtle rounded-lg p-4">
             <div className="flex items-center space-x-2">
-              <Lock className="h-5 w-5 text-blue-600" />
-              <h3 className="text-sm font-medium text-blue-900">Password Setup</h3>
+              <Lock className="h-5 w-5 text-[rgb(var(--tc-icon))]" />
+              <h3 className="text-sm font-medium text-foreground">Password Setup</h3>
             </div>
-            <p className="text-sm text-blue-700 mt-1">
+            <p className="text-sm text-menu mt-1">
               A password reset email will be sent automatically to the user when you create their account.
             </p>
           </div>
@@ -343,21 +339,19 @@ const UserForm = ({ isOpen, onClose, onSuccess }) => {
           {/* Organization & Roles Section */}
           <div className="space-y-6">
             <div className="flex items-center space-x-2">
-              <Building className="h-5 w-5 text-gray-400" />
-              <h3 className="text-lg font-medium text-gray-900">Organization & Roles</h3>
+              <Building className="h-5 w-5 text-[rgb(var(--tc-icon))]" />
+              <h3 className="text-lg font-medium text-foreground">Organization & Roles</h3>
             </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   Organization *
                 </label>
                 <select
                   value={formData.organisationId}
                   onChange={(e) => handleInputChange('organisationId', e.target.value)}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                    errors.organisationId ? 'border-red-300' : 'border-gray-300'
-                  }`}
+                  className={`input-field ${errors.organisationId ? 'border-red-400' : ''}`}
                   disabled={currentUserData?.roles.includes(USER_ROLES.ORG_ADMIN)}
                 >
                   <option value="">Select Organization</option>
@@ -376,10 +370,10 @@ const UserForm = ({ isOpen, onClose, onSuccess }) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   Roles *
                 </label>
-                <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-300 rounded-lg p-3">
+                <div className="space-y-2 max-h-40 overflow-y-auto border border-subtle rounded-lg p-3 bg-card">
                   {availableRoles.map(role => (
                     <label key={role.value} className="flex items-center space-x-3 cursor-pointer">
                       <input
@@ -387,17 +381,17 @@ const UserForm = ({ isOpen, onClose, onSuccess }) => {
                         value={role.value}
                         checked={formData.roles.includes(role.value)}
                         onChange={(e) => handleRoleChange(role.value, e.target.checked)}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        className="rounded border-subtle text-[rgb(var(--tc-icon))] focus:ring-[rgb(var(--tc-icon))]"
                       />
                       <div>
-                        <div className="font-medium text-gray-900">{role.label}</div>
-                        <div className="text-sm text-gray-500">{role.description}</div>
+                        <div className="font-medium text-foreground">{role.label}</div>
+                        <div className="text-sm text-menu">{role.description}</div>
                       </div>
                     </label>
                   ))}
                 </div>
                 {errors.roles && (
-                  <p className="mt-1 text-sm text-red-600 flex items-center">
+                  <p className="mt-1 text-sm text-red-400 flex items-center">
                     <XCircle className="h-4 w-4 mr-1" />
                     {errors.roles}
                   </p>
@@ -409,46 +403,46 @@ const UserForm = ({ isOpen, onClose, onSuccess }) => {
           {/* Profile Information Section */}
           <div className="space-y-6">
             <div className="flex items-center space-x-2">
-              <Shield className="h-5 w-5 text-gray-400" />
-              <h3 className="text-lg font-medium text-gray-900">Profile Information</h3>
+              <Shield className="h-5 w-5 text-[rgb(var(--tc-icon))]" />
+              <h3 className="text-lg font-medium text-foreground">Profile Information</h3>
             </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   Department
                 </label>
                 <input
                   type="text"
                   value={formData.profile.department}
                   onChange={(e) => handleProfileChange('department', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  className="input-field"
                   placeholder="e.g., IT, QA, Development"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   Position
                 </label>
                 <input
                   type="text"
                   value={formData.profile.position}
                   onChange={(e) => handleProfileChange('position', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  className="input-field"
                   placeholder="e.g., Senior Tester, QA Lead"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   Phone Number
                 </label>
                 <input
                   type="tel"
                   value={formData.profile.phone}
                   onChange={(e) => handleProfileChange('phone', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  className="input-field"
                   placeholder="+1 (555) 123-4567"
                 />
               </div>
@@ -456,18 +450,18 @@ const UserForm = ({ isOpen, onClose, onSuccess }) => {
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-end space-x-4 pt-6 border-t border-gray-200">
+          <div className="flex items-center justify-end space-x-4 pt-6 border-t border-subtle">
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-3 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:ring-2 focus:ring-gray-500 focus:border-gray-500 transition-colors"
+              className="px-6 py-3 text-white bg-card border border-subtle rounded-lg hover:bg-surface-muted focus:ring-2 focus:ring-[rgb(var(--tc-contrast))] transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+              className="px-6 py-3 btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
             >
               {loading ? (
                 <>

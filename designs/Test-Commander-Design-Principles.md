@@ -1,0 +1,12 @@
+- we dont regress any functionality when we make a new change
+- we dont add new code to the index.html, instead we update the appropriate modules/components
+- we keep comments, debugging and console logging to a minimum and cleanup when they are no longer required
+- no bandaid or patch fixes - instead we follow good architectural refactoring practices
+- we update the design, PRD and readme.md files with important changes 
+- ALWAYS stick to the prime directive of optimising the codebase
+- we have single implementations - no fallbacks or backwards compatibility
+- always suggest tests after a change
+- do not fix random issues you think are a problem along the journey. You just cause additional regressions. Stay focused on the problem at hand.
+- do not update a bug with a fix until AFTER its been successfully user tested and confirmed fixed
+- do NOT overengineer a solution. If I ask for a simple feature,  keep it simple, stay focused and do not do anymore than what is asked.- we dont regress any functionality when we make a new change
+- we dont add new code to the index.html, instead we update the appropriate modules/components

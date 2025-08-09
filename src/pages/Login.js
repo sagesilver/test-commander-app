@@ -121,7 +121,7 @@ const Login = () => {
   // Show password change form if user must change password
   if (currentUser && mustChangePassword) {
     return (
-      <div className="min-h-screen bg-slate-light flex items-center justify-center px-4">
+      <div className="min-h-screen bg-surface flex items-center justify-center px-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -137,8 +137,8 @@ const Login = () => {
                 className="w-full h-full object-contain"
               />
             </div>
-            <h1 className="text-3xl font-bold text-charcoal">Welcome to Test Commander</h1>
-            <p className="text-slate mt-2">Set your password to continue</p>
+            <h1 className="text-3xl font-bold text-foreground">Welcome to Test Commander</h1>
+            <p className="text-muted mt-2">Set your password to continue</p>
           </div>
 
           {/* Password Change Form */}
@@ -166,7 +166,7 @@ const Login = () => {
                   New Password
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate" />
+                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[rgb(var(--tc-icon))]" />
                   <input
                     id="newPassword"
                     type={showNewPassword ? 'text' : 'password'}
@@ -180,7 +180,7 @@ const Login = () => {
                   <button
                     type="button"
                     onClick={() => setShowNewPassword(!showNewPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate hover:text-charcoal"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted hover:text-foreground"
                   >
                     {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -192,7 +192,7 @@ const Login = () => {
                   Confirm Password
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate" />
+                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[rgb(var(--tc-icon))]" />
                   <input
                     id="confirmPassword"
                     type={showConfirmPassword ? 'text' : 'password'}
@@ -206,7 +206,7 @@ const Login = () => {
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate hover:text-charcoal"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted hover:text-foreground"
                   >
                     {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -225,9 +225,7 @@ const Login = () => {
 
           {/* Footer */}
           <div className="text-center mt-8">
-            <p className="text-sm text-slate">
-              © 2024 Test Commander. All rights reserved.
-            </p>
+            <p className="text-sm text-slate">© 2025 Sagesilver Pty Ltd. All rights reserved.</p>
           </div>
         </motion.div>
       </div>
@@ -235,7 +233,7 @@ const Login = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-light flex items-center justify-center px-4">
+    <div className="min-h-screen bg-surface flex items-center justify-center px-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -251,8 +249,8 @@ const Login = () => {
               className="w-full h-full object-contain"
             />
           </div>
-          <h1 className="text-3xl font-bold text-charcoal">Test Commander</h1>
-          <p className="text-slate mt-2">Sign in to your account</p>
+          <h1 className="text-3xl font-bold text-foreground">Test Commander</h1>
+          <p className="text-muted mt-2">Sign in to your account</p>
         </div>
 
         {/* Login Form */}
@@ -273,7 +271,7 @@ const Login = () => {
                 Email Address
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate" />
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[rgb(var(--tc-icon))]" />
                 <input
                   id="email"
                   type="email"
@@ -291,7 +289,7 @@ const Login = () => {
                 Password
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate" />
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[rgb(var(--tc-icon))]" />
                 <input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
@@ -304,7 +302,7 @@ const Login = () => {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate hover:text-charcoal"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted hover:text-foreground"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -320,10 +318,10 @@ const Login = () => {
             </button>
           </form>
 
-          {/* Divider */}
+          {/* Divider (subtle) */}
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300"></div>
+              <div className="w-full border-t border-subtle/40"></div>
             </div>
           </div>
 
@@ -333,7 +331,7 @@ const Login = () => {
               type="button"
               onClick={handleGoogleSignIn}
               disabled={loading}
-              className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-gray-300 rounded-xl text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-subtle rounded-xl text-foreground bg-card hover:bg-surface-muted focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[rgb(var(--tc-contrast))] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
             {loading ? (
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
@@ -352,9 +350,7 @@ const Login = () => {
 
         {/* Footer */}
         <div className="text-center mt-8">
-          <p className="text-sm text-slate">
-            © 2024 Test Commander. All rights reserved.
-          </p>
+          <p className="text-sm text-slate">© 2025 Sagesilver Pty Ltd. All rights reserved.</p>
         </div>
       </motion.div>
     </div>

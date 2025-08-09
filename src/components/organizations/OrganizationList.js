@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { organizationService } from '../../services/organizationService';
-import { DataGrid } from '@mui/x-data-grid';
-import { Button, Chip, IconButton, Alert, Snackbar, Dialog, DialogTitle, DialogContent, DialogActions, Typography, Box, Grid, Divider } from '@mui/material';
-import { Edit, Delete, Visibility, Add, Business, Email, Phone, Language, LocationOn, Person, Settings, CreditCard, Image, Palette, Code, Group, Folder } from '@mui/icons-material';
-import { Building, XCircle, CheckCircle } from 'lucide-react';
+import DataTable from '../table/DataTable';
+// Replaced MUI Snackbar/Alert and Icons with simple equivalents
+import { Edit, Trash2, Eye, Plus, Building, Mail as Email, XCircle, CheckCircle, Settings, CreditCard, Palette } from 'lucide-react';
 import OrganizationForm from './OrganizationForm';
 
 const OrganizationList = () => {
@@ -174,92 +173,43 @@ const OrganizationList = () => {
   };
 
   const columns = [
-    { field: 'name', headerName: 'Organization', width: 200 },
-    { field: 'description', headerName: 'Description', width: 300 },
-    { 
-      field: 'status', 
-      headerName: 'Status', 
-      width: 120,
-      renderCell: (params) => (
-        <Chip 
-          label={params.row.isActive ? 'Active' : 'Inactive'}
-          color={params.row.isActive ? 'success' : 'default'}
-          size="small"
-        />
-      )
-    },
-    {
-      field: 'users',
-      headerName: 'Users',
-      width: 100,
-      renderCell: (params) => {
-        const orgStats = stats[params.row.organisationId];
-        return orgStats ? `${orgStats.activeUsers}/${orgStats.totalUsers}` : '0/0';
-      }
-    },
-    {
-      field: 'projects',
-      headerName: 'Projects',
-      width: 100,
-      renderCell: (params) => {
-        const orgStats = stats[params.row.organisationId];
-        return orgStats ? `${orgStats.activeProjects}/${orgStats.totalProjects}` : '0/0';
-      }
-    },
-    {
-      field: 'subscription',
-      headerName: 'Plan',
-      width: 120,
-      renderCell: (params) => (
-        <Chip 
-          label={getSubscriptionPlanLabel(params.row.subscription?.plan)}
-          variant="outlined"
-          size="small"
-        />
-      )
-    },
-    {
-      field: 'actions',
-      headerName: 'Actions',
-      width: 200,
-      renderCell: (params) => (
-        <div>
-          <IconButton 
-            size="small" 
-            onClick={() => handleView(params.row)}
-            title="View Details"
-          >
-            <Visibility />
-          </IconButton>
-          <IconButton 
-            size="small" 
-            onClick={() => handleEdit(params.row)}
-            title="Edit Organization"
-          >
-            <Edit />
-          </IconButton>
-          {params.row.isActive ? (
-            <IconButton 
-              size="small" 
-              onClick={() => handleDelete(params.row)}
-              title="Deactivate Organization"
-              color="warning"
-            >
-              <Delete />
-            </IconButton>
-          ) : (
-            <IconButton 
-              size="small" 
-              onClick={() => handleRestore(params.row)}
-              title="Reactivate Organization"
-              color="success"
-            >
-              <Add />
-            </IconButton>
-          )}
-        </div>
-      )
-    }
+    { id: 'name', header: 'Organization', accessorKey: 'name', size: 200, filterType: 'text', cell: ({ getValue }) => (<span className="text-gray-900">{getValue()}</span>) },
+    { id: 'description', header: 'Description', accessorKey: 'description', size: 300, filterType: 'text', cell: ({ getValue }) => (<span className="text-gray-700">{getValue()}</span>) },
+    { id: 'status', header: 'Status', accessorKey: 'isActive', size: 120, filterType: 'select', cell: ({ getValue }) => (
+      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getValue() ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-800'}`}>
+        {getValue() ? 'Active' : 'Inactive'}
+      </span>
+    ) },
+    { id: 'users', header: 'Users', accessorKey: 'organisationId', size: 100, cell: ({ getValue }) => {
+      const s = stats[getValue()];
+      return <span className="text-gray-700">{s ? `${s.activeUsers}/${s.totalUsers}` : '0/0'}</span>;
+    } },
+    { id: 'projects', header: 'Projects', accessorKey: 'organisationId', size: 100, cell: ({ getValue }) => {
+      const s = stats[getValue()];
+      return <span className="text-gray-700">{s ? `${s.activeProjects}/${s.totalProjects}` : '0/0'}</span>;
+    } },
+    { id: 'subscription', header: 'Plan', accessorKey: 'subscription', size: 120, filterType: 'select', cell: ({ getValue }) => (
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">{getSubscriptionPlanLabel(getValue()?.plan)}</span>
+    ) },
+    { id: 'actions', header: 'Actions', size: 200, enableSorting: false, enableColumnFilter: false, cell: ({ row }) => (
+      <div>
+        <button className="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded" title="View Details" onClick={() => handleView(row.original)}>
+          <Eye />
+        </button>
+        <button className="p-1 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded" title="Edit Organization" onClick={() => handleEdit(row.original)}>
+          <Edit />
+        </button>
+        {row.original.isActive ? (
+          <button className="p-1 text-gray-600 hover:text-amber-600 hover:bg-amber-50 rounded" title="Deactivate Organization" onClick={() => handleDelete(row.original)}>
+            <Trash2 />
+          </button>
+        ) : (
+          <button className="p-1 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded" title="Reactivate Organization" onClick={() => handleRestore(row.original)}>
+            <Plus />
+          </button>
+        )}
+      </div>
+    ) },
   ];
 
   return (
@@ -267,34 +217,23 @@ const OrganizationList = () => {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-semibold">Organizations</h1>
         {currentUserData?.roles.includes('APP_ADMIN') && (
-          <Button
-            variant="contained"
-            startIcon={<Add />}
+          <button
             onClick={handleCreate}
+            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            title="Create Organization"
           >
-            Create Organization
-          </Button>
+            <Plus />
+            <span>Create Organization</span>
+          </button>
         )}
       </div>
       
-      <DataGrid
-        rows={organizations}
+      <DataTable
+        data={organizations}
         columns={columns}
-        loading={loading}
-        pageSize={10}
-        rowsPerPageOptions={[10, 25, 50]}
-        disableSelectionOnClick
-        getRowId={(row) => row.organisationId}
-        autoHeight
-        sx={{
-          '& .MuiDataGrid-cell': {
-            borderBottom: '1px solid #e0e0e0',
-          },
-          '& .MuiDataGrid-columnHeaders': {
-            backgroundColor: '#f5f5f5',
-            borderBottom: '2px solid #e0e0e0',
-          },
-        }}
+        defaultPageSize={10}
+        pageSizeOptions={[10, 25, 50]}
+        emptyMessage={loading ? 'Loading…' : 'No organizations'}
       />
 
       {/* View Organization Modal */}
@@ -625,18 +564,14 @@ const OrganizationList = () => {
         </div>
       )}
 
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-      >
-        <Alert 
-          onClose={() => setSnackbar({ ...snackbar, open: false })} 
-          severity={snackbar.severity}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
+      {snackbar.open && (
+        <div className={`fixed bottom-6 right-6 px-4 py-3 rounded-lg shadow-lg text-white ${snackbar.severity === 'error' ? 'bg-red-600' : snackbar.severity === 'success' ? 'bg-green-600' : 'bg-slate-700'}`} role="status">
+          <div className="flex items-center gap-3">
+            <span className="text-sm">{snackbar.message}</span>
+            <button className="ml-2 text-white/90 hover:text-white" onClick={() => setSnackbar({ ...snackbar, open: false })} aria-label="Close notification">✕</button>
+          </div>
+        </div>
+      )}
 
       <OrganizationForm
         open={formOpen}

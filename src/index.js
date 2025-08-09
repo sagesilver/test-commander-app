@@ -3,6 +3,18 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
 
+// Early theme application to avoid FOUC
+try {
+  const stored = localStorage.getItem('tc_theme');
+  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const initialTheme = stored === 'light' || stored === 'dark' ? stored : (prefersDark ? 'dark' : 'light');
+  if (initialTheme === 'dark') {
+    document.documentElement.classList.add('dark');
+  } else {
+    document.documentElement.classList.remove('dark');
+  }
+} catch {}
+
 // Show loading state immediately
 const loadingDiv = document.createElement('div');
 loadingDiv.innerHTML = `

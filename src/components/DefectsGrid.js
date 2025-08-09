@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { DataGrid } from '@mui/x-data-grid';
+import DataTable from './table/DataTable';
 import { 
   AlertTriangle,
   ArrowUp,
@@ -41,33 +41,34 @@ const DefectsGrid = ({ defects, onViewDefect, onEditDefect, onDeleteDefect }) =>
     }));
   }, [defects]);
 
-  // Column definitions for MUI DataGrid
+  // Column definitions for headless table
   const columns = [
     {
-      field: 'id',
-      headerName: 'Defect ID',
-      width: 150,
-      renderCell: (params) => (
-        <span className="inline-flex items-center px-2 py-1 rounded-full text-sm font-medium bg-gradient-to-r from-red-500 to-red-600 text-white">
-          {params.value}
-        </span>
-      )
+      id: 'id',
+      header: 'Defect ID',
+      accessorKey: 'id',
+      size: 150,
+      cell: ({ getValue }) => (
+        <span className="inline-flex items-center px-2 py-1 rounded-full text-sm font-medium bg-gradient-to-r from-red-500 to-red-600 text-white">{getValue()}</span>
+      ),
+      filterType: 'text',
     },
     {
-      field: 'title',
-      headerName: 'Title',
-      width: 350,
-      renderCell: (params) => (
-        <div className="font-medium text-gray-900 truncate w-full" title={params.value}>
-          {params.value}
-        </div>
-      )
+      id: 'title',
+      header: 'Title',
+      accessorKey: 'title',
+      size: 350,
+      cell: ({ getValue }) => (
+        <div className="font-medium text-gray-900 truncate w-full" title={getValue()}>{getValue()}</div>
+      ),
+      filterType: 'text',
     },
     {
-      field: 'status',
-      headerName: 'Status',
-      width: 130,
-      renderCell: (params) => {
+      id: 'status',
+      header: 'Status',
+      accessorKey: 'status',
+      size: 130,
+      cell: ({ getValue }) => {
         const config = {
           'Open': {
             bg: 'bg-gradient-to-r from-red-500 to-red-600',
@@ -95,21 +96,24 @@ const DefectsGrid = ({ defects, onViewDefect, onEditDefect, onDeleteDefect }) =>
             icon: '⏸'
           }
         };
-        const style = config[params.value] || config['Open'];
+        const value = getValue();
+        const style = config[value] || config['Open'];
         
         return (
           <span className={`inline-flex items-center space-x-1 px-2 py-1 rounded-full text-sm font-medium ${style.bg} ${style.text}`}>
             <span className="text-sm">{style.icon}</span>
-            <span>{params.value}</span>
+            <span>{value}</span>
           </span>
         );
-      }
+      },
+      filterType: 'select',
     },
     {
-      field: 'severity',
-      headerName: 'Severity',
-      width: 120,
-      renderCell: (params) => {
+      id: 'severity',
+      header: 'Severity',
+      accessorKey: 'severity',
+      size: 120,
+      cell: () => {
         const config = {
           'Critical': { 
             icon: <AlertTriangle className="w-3 h-3 text-white" />,
@@ -132,21 +136,22 @@ const DefectsGrid = ({ defects, onViewDefect, onEditDefect, onDeleteDefect }) =>
             text: 'text-white'
           }
         };
-        const style = config[params.value] || config['Medium'];
+        const style = config['Medium'];
         
         return (
           <div className={`flex items-center space-x-1 px-2 py-1 rounded-full text-sm font-medium ${style.bg} ${style.text}`}>
             {style.icon}
-            <span>{params.value}</span>
+            <span>Medium</span>
           </div>
         );
-      }
+      },
     },
     {
-      field: 'priority',
-      headerName: 'Priority',
-      width: 120,
-      renderCell: (params) => {
+      id: 'priority',
+      header: 'Priority',
+      accessorKey: 'priority',
+      size: 120,
+      cell: ({ getValue }) => {
         const config = {
           'Critical': { 
             icon: <AlertTriangle className="w-3 h-3 text-white" />,
@@ -169,21 +174,24 @@ const DefectsGrid = ({ defects, onViewDefect, onEditDefect, onDeleteDefect }) =>
             text: 'text-white'
           }
         };
-        const style = config[params.value] || config['Medium'];
+        const value = getValue();
+        const style = config[value] || config['Medium'];
         
         return (
           <div className={`flex items-center space-x-1 px-2 py-1 rounded-full text-sm font-medium ${style.bg} ${style.text}`}>
             {style.icon}
-            <span>{params.value}</span>
+            <span>{value}</span>
           </div>
         );
-      }
+      },
+      filterType: 'select',
     },
     {
-      field: 'assignedTo',
-      headerName: 'Assigned To',
-      width: 180,
-      renderCell: (params) => {
+      id: 'assignedTo',
+      header: 'Assigned To',
+      accessorKey: 'assignedTo',
+      size: 180,
+      cell: ({ getValue }) => {
         const colors = [
           'from-purple-500 to-pink-500',
           'from-blue-500 to-cyan-500', 
@@ -191,84 +199,80 @@ const DefectsGrid = ({ defects, onViewDefect, onEditDefect, onDeleteDefect }) =>
           'from-orange-500 to-red-500',
           'from-indigo-500 to-purple-500'
         ];
-        const assigneeInitials = params.value?.split(' ').map(n => n[0]).join('').toUpperCase() || 'UN';
-        const colorIndex = (params.value?.length || 0) % colors.length;
+        const value = getValue();
+        const assigneeInitials = value?.split(' ').map(n => n[0]).join('').toUpperCase() || 'UN';
+        const colorIndex = (value?.length || 0) % colors.length;
         
         return (
           <div className="flex items-center space-x-2">
             <div className={`w-6 h-6 bg-gradient-to-br ${colors[colorIndex]} rounded-full flex items-center justify-center`}>
               <span className="text-white text-xs font-bold">{assigneeInitials}</span>
             </div>
-            <span className="text-sm font-medium text-gray-900">{params.value || 'Unassigned'}</span>
+            <span className="text-sm font-medium text-gray-900">{value || 'Unassigned'}</span>
           </div>
         );
-      }
+      },
+      filterType: 'text',
+    },
+    { id: 'project', header: 'Project', accessorKey: 'project', size: 160, cell: ({ getValue }) => (<span className="text-sm text-gray-700">{getValue()}</span>), filterType: 'text' },
+    {
+      id: 'module', header: 'Module', accessorKey: 'module', size: 140, cell: ({ getValue }) => (<span className="text-sm text-gray-700">{getValue()}</span>), filterType: 'text'
     },
     {
-      field: 'project',
-      headerName: 'Project',
-      width: 160,
-      renderCell: (params) => (
-        <span className="text-sm text-gray-700">{params.value}</span>
-      )
-    },
-    {
-      field: 'module',
-      headerName: 'Module',
-      width: 140,
-      renderCell: (params) => (
-        <span className="text-sm text-gray-700">{params.value}</span>
-      )
-    },
-    {
-      field: 'updatedDate',
-      headerName: 'Updated',
-      width: 120,
-      renderCell: (params) => (
+      id: 'updatedDate',
+      header: 'Updated',
+      accessorKey: 'updatedDate',
+      size: 120,
+      cell: ({ getValue }) => (
         <div className="flex items-center space-x-1">
           <Clock className="w-3 h-3 text-gray-500" />
-          <span className="text-sm text-gray-600">{params.value}</span>
+          <span className="text-sm text-gray-600">{getValue()}</span>
         </div>
-      )
+      ),
+      filterType: 'text',
     },
     {
-      field: 'comments',
-      headerName: 'Comments',
-      width: 100,
-      renderCell: (params) => (
+      id: 'comments',
+      header: 'Comments',
+      accessorKey: 'comments',
+      size: 100,
+      cell: ({ getValue }) => (
         <div className="flex items-center space-x-1">
           <MessageSquare className="w-3 h-3 text-gray-500" />
-          <span className="text-sm text-gray-600">{params.value}</span>
+          <span className="text-sm text-gray-600">{getValue()}</span>
         </div>
-      )
+      ),
+      filterType: 'text',
     },
     {
-      field: 'attachments',
-      headerName: 'Files',
-      width: 80,
-      renderCell: (params) => (
-        params.value > 0 ? (
+      id: 'attachments',
+      header: 'Files',
+      accessorKey: 'attachments',
+      size: 80,
+      cell: ({ getValue }) => (
+        getValue() > 0 ? (
           <div className="flex items-center space-x-1">
             <Paperclip className="w-3 h-3 text-gray-500" />
-            <span className="text-sm text-gray-600">{params.value}</span>
+            <span className="text-sm text-gray-600">{getValue()}</span>
           </div>
         ) : (
           <span className="text-sm text-gray-400">—</span>
         )
-      )
+      ),
+      filterType: 'text',
     },
     {
-      field: 'actions',
-      headerName: 'Actions',
-      width: 120,
-      sortable: false,
-      filterable: false,
-      renderCell: (params) => (
+      id: 'actions',
+      header: 'Actions',
+      size: 120,
+      enableSorting: false,
+      enableColumnFilter: false,
+      cell: ({ row }) => (
         <div className="flex items-center space-x-1">
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onViewDefect(params.row.originalData);
+              onViewDefect(row.original.originalData);
             }}
             className="p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
             title="View Defect"
@@ -278,7 +282,7 @@ const DefectsGrid = ({ defects, onViewDefect, onEditDefect, onDeleteDefect }) =>
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onEditDefect(params.row.originalData);
+              onEditDefect(row.original.originalData);
             }}
             className="p-1 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
             title="Edit Defect"
@@ -288,7 +292,7 @@ const DefectsGrid = ({ defects, onViewDefect, onEditDefect, onDeleteDefect }) =>
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onDeleteDefect(params.row.originalData);
+              onDeleteDefect(row.original.originalData);
             }}
             className="p-1 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
             title="Delete Defect"
@@ -296,7 +300,7 @@ const DefectsGrid = ({ defects, onViewDefect, onEditDefect, onDeleteDefect }) =>
             <Trash2 className="w-4 h-4" />
           </button>
         </div>
-      )
+      ),
     }
   ];
 
@@ -314,75 +318,12 @@ const DefectsGrid = ({ defects, onViewDefect, onEditDefect, onDeleteDefect }) =>
         </div>
         
         <div style={{ height: 600, width: '100%' }}>
-          <DataGrid
-            rows={gridData}
+          <DataTable
+            data={gridData}
             columns={columns}
-            pageSize={20}
-            rowsPerPageOptions={[10, 20, 50]}
-            checkboxSelection={false}
-            disableSelectionOnClick
-            autoHeight={false}
-            disableColumnMenu={false}
-            disableColumnFilter={false}
-            disableColumnSelector={false}
-            sx={{
-              '& .MuiDataGrid-cell': {
-                display: 'flex',
-                alignItems: 'center',
-                padding: '8px 16px',
-              },
-              '& .MuiDataGrid-columnHeaders': {
-                backgroundColor: '#f9fafb',
-              },
-              '& .MuiDataGrid-columnHeader': {
-                display: 'flex',
-                alignItems: 'center',
-              },
-              '& .MuiDataGrid-row:hover': {
-                backgroundColor: '#f3f4f6',
-              },
-              '& .MuiDataGrid-columnHeaderTitle': {
-                fontWeight: 'bold',
-              },
-              '& .MuiDataGrid-filler': {
-                display: 'none',
-              },
-              '& .MuiDataGrid-columnHeader .MuiDataGrid-menuIcon': {
-                visibility: 'visible !important',
-                opacity: '1 !important',
-                display: 'flex !important',
-              },
-              '& .MuiDataGrid-columnHeader .MuiDataGrid-sortIcon': {
-                visibility: 'visible !important',
-                opacity: '1 !important',
-                display: 'flex !important',
-              },
-              '& .MuiDataGrid-columnHeader .MuiDataGrid-iconButtonContainer': {
-                visibility: 'visible !important',
-                opacity: '1 !important',
-                display: 'flex !important',
-              },
-              '& .MuiDataGrid-columnHeader:hover .MuiDataGrid-menuIcon': {
-                visibility: 'visible !important',
-                opacity: '1 !important',
-                display: 'flex !important',
-              },
-              '& .MuiDataGrid-columnHeader:not(:hover) .MuiDataGrid-menuIcon': {
-                visibility: 'visible !important',
-                opacity: '1 !important',
-                display: 'flex !important',
-              },
-              '& .MuiDataGrid-columnHeader:hover .MuiDataGrid-sortIcon': {
-                visibility: 'visible !important',
-                opacity: '1 !important',
-                display: 'flex !important',
-              },
-              '& .MuiDataGrid-columnHeader:not(:hover) .MuiDataGrid-sortIcon': {
-                visibility: 'visible !important',
-                opacity: '1 !important',
-                display: 'flex !important',
-              }
-            }}
+            defaultPageSize={20}
+            pageSizeOptions={[10, 20, 50]}
+            emptyMessage="No defects"
           />
         </div>
       </div>

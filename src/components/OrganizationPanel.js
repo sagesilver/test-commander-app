@@ -15,14 +15,14 @@ const OrganizationPanel = ({ organization, stats, onClick }) => {
   const getStatusBadge = (isActive) => {
     if (isActive) {
       return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-900/30 text-green-400">
           <CheckCircle className="w-3 h-3 mr-1" />
           Active
         </span>
       );
     } else {
       return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-900/30 text-red-400">
           <XCircle className="w-3 h-3 mr-1" />
           Inactive
         </span>
@@ -42,12 +42,12 @@ const OrganizationPanel = ({ organization, stats, onClick }) => {
     };
     
     const planColors = {
-      'free': 'bg-gray-100 text-gray-800',
-      'basic': 'bg-green-100 text-green-800',
-      'pro': 'bg-blue-100 text-blue-800',
-      'premium': 'bg-purple-100 text-purple-800',
-      'enterprise': 'bg-indigo-100 text-indigo-800',
-      'trial': 'bg-yellow-100 text-yellow-800'
+      'free': 'bg-gray-800 text-gray-200',
+      'basic': 'bg-green-900/30 text-green-400',
+      'pro': 'bg-blue-900/30 text-[rgb(var(--tc-contrast))]',
+      'premium': 'bg-purple-900/30 text-purple-300',
+      'enterprise': 'bg-indigo-900/30 text-indigo-300',
+      'trial': 'bg-yellow-900/30 text-yellow-300'
     };
 
     return (
@@ -98,14 +98,14 @@ const OrganizationPanel = ({ organization, stats, onClick }) => {
 
   return (
     <motion.div
-      whileHover={{ scale: 1.02 }}
+      whileHover={{ scale: 1.01 }}
       whileTap={{ scale: 0.98 }}
-      className="flex items-center justify-between p-4 bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer border border-gray-100"
+      className="group flex items-center justify-between p-4 bg-card rounded-xl shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer border border-subtle hover:bg-white/5 hover:border-white/10"
       onClick={() => onClick(organization)}
     >
       <div className="flex items-center gap-4 flex-1">
         {/* Logo/Avatar */}
-        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+        <div className="w-10 h-10 rounded-full bg-[rgb(var(--tc-icon))]/20 flex items-center justify-center">
           {organization.settings?.branding?.logo ? (
             <img 
               src={organization.settings.branding.logo} 
@@ -113,14 +113,14 @@ const OrganizationPanel = ({ organization, stats, onClick }) => {
               className="w-10 h-10 rounded-full object-cover"
             />
           ) : (
-            <Building className="w-5 h-5 text-blue-600" />
+            <Building className="w-5 h-5 text-[rgb(var(--tc-icon))]" />
           )}
         </div>
 
         {/* Organization Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <h4 className="font-semibold text-gray-900 truncate">
+            <h4 className="font-semibold text-foreground truncate">
               {organization.name}
             </h4>
           </div>
@@ -136,19 +136,19 @@ const OrganizationPanel = ({ organization, stats, onClick }) => {
       {/* Metrics and Actions */}
       <div className="flex items-center gap-4">
         {/* User Count */}
-        <div className="flex items-center text-sm text-gray-600">
-          <Users className="w-4 h-4 mr-1" />
+        <div className="flex items-center text-sm text-menu group-hover:text-white/80 transition-colors">
+          <Users className="w-4 h-4 mr-1 text-[rgb(var(--tc-icon))]" />
           <span>{stats?.totalUsers || 0}</span>
         </div>
 
         {/* Project Count */}
-        <div className="flex items-center text-sm text-gray-600">
-          <Folder className="w-4 h-4 mr-1" />
+        <div className="flex items-center text-sm text-menu group-hover:text-white/80 transition-colors">
+          <Folder className="w-4 h-4 mr-1 text-[rgb(var(--tc-icon))]" />
           <span>{stats?.totalProjects || 0}</span>
         </div>
 
         {/* Chevron */}
-        <ChevronRight className="w-5 h-5 text-gray-400" />
+        <ChevronRight className="w-5 h-5 text-menu group-hover:text-white/80 transition-colors" />
       </div>
     </motion.div>
   );

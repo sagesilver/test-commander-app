@@ -2,34 +2,105 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Theme CSS variables */
+:root {
+  /* Light theme (RGB values) */
+  --tc-surface: 247 249 250;         /* #f7f9fa */
+  --tc-surface-muted: 234 242 251;   /* #eaf2fb */
+  --tc-card: 255 255 255;            /* #ffffff */
+  --tc-border-subtle: 227 231 237;   /* #e3e7ed */
+  --tc-foreground: 16 19 21;         /* #101315 */
+  --tc-muted: 96 106 120;            /* #606a78 */
+  --tc-icon: 55 98 196;              /* #3762c4 */
+  --tc-contrast: 82 168 240;         /* #52a8f0 */
+  --tc-menu: 135 135 135;            /* #878787 */
+}
+
+.dark {
+  /* Dark theme per spec */
+  --tc-surface: 0 0 0;               /* black background */
+  --tc-surface-muted: 10 10 10;      /* #0a0a0a panels */
+  --tc-card: 10 10 10;               /* panels/cards */
+  --tc-border-subtle: 38 38 38;      /* #262626 */
+  --tc-foreground: 255 255 255;      /* white text */
+  --tc-muted: 180 190 200;           /* soft text */
+  --tc-icon: 0 114 245;              /* #0072f5 */
+  --tc-contrast: 82 168 240;         /* #52a8f0 */
+  --tc-menu: 135 135 135;            /* #878787 */
+}
+
 @layer base {
   body {
-    @apply bg-slate-light text-charcoal font-sans;
+    @apply bg-surface text-foreground font-sans;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply bg-primary text-white px-6 py-3 rounded-xl font-medium hover:bg-primary-dark transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2;
+    @apply bg-[rgb(var(--tc-icon))] text-white px-6 py-3 rounded-lg font-medium hover:brightness-110 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[rgb(var(--tc-contrast))] focus:ring-offset-2;
   }
   
   .btn-secondary {
-    @apply bg-white text-primary border border-grey-light px-6 py-3 rounded-xl font-medium hover:bg-primary-light transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2;
+    @apply bg-card text-white border border-subtle px-6 py-3 rounded-lg font-medium hover:bg-surface-muted transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[rgb(var(--tc-contrast))] focus:ring-offset-2;
   }
   
   .card {
-    @apply bg-white rounded-2xl shadow-card p-6;
+    @apply bg-card rounded-2xl shadow-card p-6;
   }
   
   .input-field {
-    @apply w-full px-4 py-3 border border-grey-light rounded-xl focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent placeholder:text-grey-mid;
+    @apply w-full px-4 py-3 border border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent placeholder:text-grey-mid bg-card text-foreground;
+  }
+  /* Force exact dark field background (#0a0a0a) in Test Case forms and View modal */
+  .dark .tc-testcase-form .input-field { @apply bg-[#0a0a0a]; }
+  .dark .tc-testcase-form select.input-field { @apply bg-[#0a0a0a]; }
+  .dark .tc-testcase-form textarea.input-field { @apply bg-[#0a0a0a]; }
+  /* Hard override to ensure exact colour regardless of utility order */
+  .dark .tc-testcase-form .input-field,
+  .dark .tc-testcase-form select.input-field,
+  .dark .tc-testcase-form textarea.input-field {
+    background-color: #0a0a0a !important;
+  }
+
+  /* View (read-only) Test Case specifics */
+  .dark .tc-testcase-view .input-field,
+  .dark .tc-testcase-view select.input-field,
+  .dark .tc-testcase-view textarea.input-field {
+    background-color: #141617 !important;
+    color: #b3bbc9 !important;
+  }
+  /* Editable forms (New/Edit) input colours to match Org form */
+  .dark .tc-testcase-edit .input-field,
+  .dark .tc-testcase-edit select.input-field,
+  .dark .tc-testcase-edit textarea.input-field {
+    background-color: #141617 !important;
+    color: #b3bbc9 !important;
+  }
+  .dark .tc-testcase-edit .input-field::placeholder,
+  .dark .tc-testcase-edit textarea.input-field::placeholder { color: #b3bbc9 !important; opacity: .8; }
+
+  /* New Test Case form uses same editable input styling */
+  .dark .tc-testcase-new .input-field,
+  .dark .tc-testcase-new select.input-field,
+  .dark .tc-testcase-new textarea.input-field {
+    background-color: #141617 !important;
+    color: #b3bbc9 !important;
+  }
+  .dark .tc-testcase-new .input-field::placeholder,
+  .dark .tc-testcase-new textarea.input-field::placeholder { color: #b3bbc9 !important; opacity: .8; }
+  /* Step cards match view field background */
+  .dark .tc-testcase-view .step-card { background-color: #141617; }
+  .dark .tc-testcase-view .input-field::placeholder,
+  .dark .tc-testcase-view textarea.input-field::placeholder {
+    color: #b3bbc9 !important;
+    opacity: 0.9;
   }
   
   .nav-link {
-    @apply px-4 py-2 text-slate hover:text-primary transition-colors duration-200;
+    @apply px-3 py-2 text-menu hover:text-white hover:bg-white/10 rounded-md transition-colors duration-200;
   }
   
   .nav-link-active {
-    @apply px-4 py-2 text-primary border-b-2 border-primary;
+    @apply px-3 py-2 text-white bg-white/10 rounded-md;
   }
 } 

@@ -194,6 +194,21 @@ export const updateUser = async (userId, updateData) => {
   }
 };
 
+// Convenience helper to update user preferences (e.g., theme)
+export const updateUserPreferences = async (userId, preferencesUpdate) => {
+  try {
+    const userRef = doc(db, "users", userId);
+    await updateDoc(userRef, {
+      preferences: preferencesUpdate,
+      updatedAt: serverTimestamp(),
+    });
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating user preferences:', error);
+    throw error;
+  }
+};
+
 // Delete user
 export const deleteUserById = async (userId) => {
   try {

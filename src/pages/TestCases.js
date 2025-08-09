@@ -18,8 +18,13 @@ import {
   ArrowUp,
   ArrowDown,
   Circle,
-  Download
-} from 'lucide-react';
+  Download,
+  BarChart3,
+  ClipboardList,
+  ListChecks,
+  ListOrdered,
+  Info
+ } from 'lucide-react';
 import TestCasesGrid from '../components/TestCasesGrid';
 
 const TestCases = () => {
@@ -40,6 +45,7 @@ const TestCases = () => {
     description: '',
     author: '',
     testType: '',
+    priority: 'Medium',
     overallResult: '',
     prerequisites: '',
     testSteps: []
@@ -50,6 +56,7 @@ const TestCases = () => {
     description: '',
     author: '',
     testType: '',
+    priority: 'Medium',
     overallResult: '',
     prerequisites: '',
     testSteps: []
@@ -592,18 +599,27 @@ const TestCases = () => {
   ]);
 
   const statusColors = {
-    'Passed': 'text-green-500 bg-green-50',
-    'Failed': 'text-red-500 bg-red-50',
-    'In Progress': 'text-amber-500 bg-amber-50',
-    'Not Run': 'text-slate bg-slate-light'
+    Passed: 'text-green-400 bg-green-900/20',
+    Failed: 'text-red-400 bg-red-900/20',
+    'In Progress': 'text-amber-300 bg-amber-900/20',
+    'Not Run': 'text-menu bg-white/5',
   };
 
   const testTypeColors = {
-    'Functional': 'text-blue-500',
-    'Security': 'text-red-500',
-    'Performance': 'text-purple-500',
-    'Usability': 'text-green-500',
-    'Integration': 'text-orange-500'
+    Functional: 'text-[rgb(var(--tc-contrast))]',
+    Security: 'text-red-400',
+    Performance: 'text-purple-300',
+    Usability: 'text-green-400',
+    Integration: 'text-orange-300',
+  };
+
+  const priorityPill = (p) => {
+    const map = {
+      High: 'bg-red-900/20 text-red-400',
+      Medium: 'bg-orange-900/20 text-orange-300',
+      Low: 'bg-green-900/20 text-green-400',
+    };
+    return map[p] || map.Medium;
   };
 
   // Helper function to find and update test case in hierarchy
@@ -962,15 +978,15 @@ const TestCases = () => {
     return (
       <div key={node.id} className="space-y-2">
         <div 
-          className={`flex items-center space-x-2 p-3 rounded-xl hover:bg-slate-light transition-colors cursor-pointer ${
-            level === 0 ? 'bg-primary-light' : ''
+          className={`flex items-center space-x-2 p-3 rounded-xl hover:bg-white/5 transition-colors cursor-pointer ${
+            level === 0 ? 'bg-white/5' : ''
           }`}
           style={{ paddingLeft: `${level * 20 + 12}px` }}
         >
           {hasChildren && (
             <button
               onClick={() => toggleNode(node.id)}
-              className="p-1 hover:bg-white rounded transition-colors"
+              className="p-1 hover:bg-white/10 rounded transition-colors"
             >
               {isExpanded ? (
                 <ChevronDown className="w-4 h-4 text-slate" />
@@ -981,17 +997,17 @@ const TestCases = () => {
           )}
           
           <div className="flex items-center space-x-2 flex-1">
-            <FileText className="w-4 h-4 text-primary" />
-            <span className="font-medium text-charcoal">{node.name}</span>
+            <FileText className="w-4 h-4 text-[rgb(var(--tc-icon))]" />
+            <span className="font-medium text-foreground">{node.name}</span>
             {node.type !== 'project' && (
-              <span className="text-xs text-slate bg-white px-2 py-1 rounded-full">
+              <span className="text-xs text-menu bg-white/5 px-2 py-1 rounded-full">
                 {node.type}
               </span>
             )}
           </div>
 
           {hasTestCases && (
-            <span className="text-sm text-slate">
+            <span className="text-sm text-menu">
               {node.testCases.length} test cases
             </span>
           )}
@@ -1005,16 +1021,17 @@ const TestCases = () => {
                 key={testCase.tcid}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="bg-white rounded-xl p-4 shadow-sm border border-grey-light"
+                className="group bg-card rounded-xl p-4 shadow-sm border border-subtle hover:bg-white/5 transition-colors"
+                onDoubleClick={() => handleViewTestCase(testCase)}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-primary-light rounded-lg flex items-center justify-center">
-                      <span className="text-primary font-semibold text-sm">TC</span>
+                    <div className="w-8 h-8 bg-[rgb(var(--tc-icon))]/20 rounded-lg flex items-center justify-center">
+                      <span className="text-[rgb(var(--tc-icon))] font-semibold text-sm">TC</span>
                     </div>
                     <div>
-                       <h4 className="font-medium text-charcoal">{testCase.tcid}: {testCase.name}</h4>
-                       <p className="text-sm text-slate mt-1 line-clamp-2">{testCase.description}</p>
+                       <h4 className="font-medium text-foreground">{testCase.tcid}: {testCase.name}</h4>
+                       <p className="text-sm text-menu mt-1 line-clamp-2">{testCase.description}</p>
                        <div className="flex items-center space-x-3 mt-2">
                          <span className={`text-xs px-2 py-1 rounded-full ${statusColors[testCase.overallResult]}`}>
                            {testCase.overallResult}
@@ -1022,10 +1039,10 @@ const TestCases = () => {
                          <span className={`text-xs font-medium ${testTypeColors[testCase.testType]}`}>
                            {testCase.testType}
                          </span>
-                         <span className="text-xs text-slate">
+                         <span className="text-xs text-menu">
                            by {testCase.author}
                         </span>
-                         <span className="text-xs text-slate">
+                         <span className="text-xs text-menu">
                            {testCase.testSteps.length} steps
                         </span>
                       </div>
@@ -1034,45 +1051,33 @@ const TestCases = () => {
                   
                   <div className="flex items-center space-x-2">
                      <button 
-                       onClick={() => handleViewTestCase(testCase)}
-                       className="p-2 text-slate hover:text-primary hover:bg-primary-light rounded-lg transition-colors relative group"
-                       title="View Test Case Details"
-                     >
-                      <Eye className="w-4 h-4" />
-                       <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-charcoal text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
-                         View Details
-                       </div>
-                    </button>
+                        onClick={() => handleViewTestCase(testCase)}
+                        className="group p-2 text-menu hover:text-white hover:bg-white/10 rounded-lg transition-colors relative"
+                        aria-label="View Test Case Details"
+                      >
+                       <Eye className="w-4 h-4" />
+                     </button>
                      <button 
-                       onClick={() => handleEditTestCase(testCase)}
-                       className="p-2 text-slate hover:text-primary hover:bg-primary-light rounded-lg transition-colors relative group"
-                       title="Edit Test Case"
-                     >
-                      <Edit className="w-4 h-4" />
-                       <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-charcoal text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
-                         Edit Test Case
-                       </div>
-                    </button>
+                        onClick={() => handleEditTestCase(testCase)}
+                        className="group p-2 text-menu hover:text-white hover:bg-white/10 rounded-lg transition-colors relative"
+                        aria-label="Edit Test Case"
+                      >
+                       <Edit className="w-4 h-4" />
+                     </button>
                      <button 
-                       onClick={() => handleDuplicateTestCase(testCase)}
-                       className="p-2 text-slate hover:text-primary hover:bg-primary-light rounded-lg transition-colors relative group"
-                       title="Duplicate Test Case"
-                     >
-                      <Copy className="w-4 h-4" />
-                       <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-charcoal text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
-                         Duplicate Test Case
-                       </div>
-                    </button>
+                        onClick={() => handleDuplicateTestCase(testCase)}
+                        className="group p-2 text-menu hover:text-white hover:bg-white/10 rounded-lg transition-colors relative"
+                        aria-label="Duplicate Test Case"
+                      >
+                       <Copy className="w-4 h-4" />
+                     </button>
                      <button 
-                       onClick={() => handleDeleteTestCase(testCase)}
-                       className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors relative group"
-                       title="Delete Test Case"
-                     >
-                      <Trash2 className="w-4 h-4" />
-                       <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-red-500 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
-                         Delete Test Case
-                       </div>
-                    </button>
+                        onClick={() => handleDeleteTestCase(testCase)}
+                        className="group p-2 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg transition-colors relative"
+                        aria-label="Delete Test Case"
+                      >
+                       <Trash2 className="w-4 h-4" />
+                     </button>
                   </div>
                 </div>
               </motion.div>
@@ -1095,16 +1100,16 @@ const TestCases = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-semibold text-charcoal">Test Cases</h1>
-          <p className="text-slate mt-1">Manage and organize your test cases in a hierarchical structure.</p>
+          <h1 className="text-3xl font-semibold text-foreground">Test Cases</h1>
+          <p className="text-menu mt-1">Manage and organize your test cases in a hierarchical structure.</p>
         </div>
         <div className="flex items-center space-x-3">
-          <button className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors whitespace-nowrap">
+          <button className="flex items-center space-x-2 px-4 py-2 bg-surface-muted border border-subtle text-white rounded-lg hover:brightness-110 transition-colors whitespace-nowrap">
             <Download className="w-4 h-4" />
             <span>Export</span>
           </button>
           <button 
-            className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+            className="flex items-center space-x-2 px-4 py-2 btn-primary whitespace-nowrap"
             onClick={() => setShowNewTestCaseModal(true)}
           >
             <Plus className="w-4 h-4" />
@@ -1118,16 +1123,16 @@ const TestCases = () => {
              {/* Test Hierarchy */}
        <div className="card">
          <div className="flex justify-between items-center mb-4">
-           <h3 className="text-lg font-semibold text-charcoal">Test Cases</h3>
+           <h3 className="text-lg font-semibold text-foreground">Test Cases</h3>
            <div className="flex items-center space-x-2">
-             <span className="text-sm text-slate">({getFilteredTestCases().length})</span>
-             <div className="flex bg-slate-light rounded-lg p-1">
+             <span className="text-sm text-menu">({getFilteredTestCases().length})</span>
+             <div className="flex bg-surface-muted rounded-lg p-1 border border-subtle">
                <button
                  onClick={() => setViewMode('tree')}
                  className={`p-2 rounded-md transition-colors ${
                    viewMode === 'tree' 
-                     ? 'bg-white text-primary shadow-sm' 
-                     : 'text-slate hover:text-charcoal'
+                     ? 'bg-white/10 text-white' 
+                     : 'text-menu hover:text-white'
                  }`}
                  title="Tree View"
                >
@@ -1137,8 +1142,8 @@ const TestCases = () => {
                    onClick={() => setViewMode('grid')}
                    className={`p-2 rounded-md transition-colors ${
                      viewMode === 'grid' 
-                       ? 'bg-white text-primary shadow-sm' 
-                       : 'text-slate hover:text-charcoal'
+                        ? 'bg-white/10 text-white' 
+                        : 'text-menu hover:text-white'
                    }`}
                    title="Grid View"
                  >
@@ -1171,23 +1176,27 @@ const TestCases = () => {
            <motion.div
              initial={{ opacity: 0, scale: 0.9 }}
              animate={{ opacity: 1, scale: 1 }}
-             className="bg-white rounded-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto"
+             className="bg-card border border-subtle rounded-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto"
            >
              <div className="flex justify-between items-center mb-6">
-               <h3 className="text-xl font-semibold text-charcoal">Create New Test Case</h3>
+               <h3 className="text-xl font-semibold text-foreground">Create New Test Case</h3>
                <button
                  onClick={() => setShowNewTestCaseModal(false)}
-                 className="p-2 text-slate hover:text-charcoal transition-colors"
+                 className="p-2 text-menu hover:text-white hover:bg-white/10 rounded transition-colors"
                >
                  <X className="w-5 h-5" />
                </button>
              </div>
              
-             <form onSubmit={handleNewTestCaseSubmit} className="space-y-6">
+              <form onSubmit={handleNewTestCaseSubmit} className="tc-testcase-form tc-testcase-new space-y-6">
                {/* Basic Information */}
+               <div className="flex items-center gap-2">
+                 <Info className="h-5 w-5 text-[rgb(var(--tc-icon))]" />
+                 <h4 className="text-lg font-medium text-foreground">Basic Information</h4>
+               </div>
                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <div>
-                   <label className="block text-sm font-medium text-charcoal mb-2">
+                   <label className="block text-sm font-medium text-foreground mb-2">
                      Test Case ID (TCID) <span className="text-red-500">*</span>
                    </label>
                    <input
@@ -1201,7 +1210,7 @@ const TestCases = () => {
                  </div>
                  
                  <div>
-                   <label className="block text-sm font-medium text-charcoal mb-2">
+                   <label className="block text-sm font-medium text-foreground mb-2">
                      Test Case Name <span className="text-red-500">*</span>
                    </label>
                    <input
@@ -1216,7 +1225,11 @@ const TestCases = () => {
                </div>
 
                <div>
-                 <label className="block text-sm font-medium text-charcoal mb-2">
+                 <div className="flex items-center gap-2 mb-2">
+                   <ClipboardList className="h-5 w-5 text-[rgb(var(--tc-icon))]" />
+                   <h4 className="text-lg font-medium text-foreground">Description/Objective</h4>
+                 </div>
+                 <label className="block text-sm font-medium text-foreground mb-2">
                    Description/Objective <span className="text-red-500">*</span>
                  </label>
                  <textarea
@@ -1229,9 +1242,14 @@ const TestCases = () => {
                  />
                </div>
 
+               {/* Status & Results */}
+               <div className="flex items-center gap-2">
+                 <BarChart3 className="h-5 w-5 text-[rgb(var(--tc-icon))]" />
+                 <h4 className="text-lg font-medium text-foreground">Status & Results</h4>
+               </div>
                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                  <div>
-                   <label className="block text-sm font-medium text-charcoal mb-2">
+                   <label className="block text-sm font-medium text-foreground mb-2">
                      Test Author <span className="text-red-500">*</span>
                    </label>
                    <input
@@ -1245,7 +1263,7 @@ const TestCases = () => {
                  </div>
                  
                  <div>
-                   <label className="block text-sm font-medium text-charcoal mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                      Test Type
                    </label>
                    <select 
@@ -1261,9 +1279,24 @@ const TestCases = () => {
                      <option value="Integration">Integration</option>
                    </select>
                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">
+                      Priority
+                    </label>
+                    <select
+                      className="input-field"
+                      value={newTestCaseForm.priority}
+                      onChange={(e) => setNewTestCaseForm(prev => ({ ...prev, priority: e.target.value }))}
+                    >
+                      <option value="Low">Low</option>
+                      <option value="Medium">Medium</option>
+                      <option value="High">High</option>
+                    </select>
+                  </div>
                  
                  <div>
-                   <label className="block text-sm font-medium text-charcoal mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                      Overall Test Result
                    </label>
                    <select 
@@ -1281,7 +1314,11 @@ const TestCases = () => {
                </div>
 
                <div>
-                 <label className="block text-sm font-medium text-charcoal mb-2">
+                 <div className="flex items-center gap-2 mb-2">
+                   <ListChecks className="h-5 w-5 text-[rgb(var(--tc-icon))]" />
+                   <h4 className="text-lg font-medium text-foreground">Pre-Requisites</h4>
+                 </div>
+                 <label className="block text-sm font-medium text-foreground mb-2">
                    Test Pre-Requisites
                  </label>
                  <textarea
@@ -1295,8 +1332,11 @@ const TestCases = () => {
 
                {/* Test Steps Section */}
                <div>
-                 <div className="flex justify-between items-center mb-4">
-                   <h4 className="text-lg font-semibold text-charcoal">Test Steps</h4>
+               <div className="flex justify-between items-center mb-4">
+                   <div className="flex items-center gap-2">
+                     <ListChecks className="h-5 w-5 text-[rgb(var(--tc-icon))]" />
+                     <h4 className="text-lg font-medium text-foreground">Test Steps</h4>
+                   </div>
                    <button
                      type="button"
                      onClick={() => addTestStep('new')}
@@ -1308,10 +1348,10 @@ const TestCases = () => {
                  </div>
                  
                  <div className="space-y-4">
-                   {newTestCaseForm.testSteps.map((step, index) => (
-                     <div key={index} className="bg-slate-light rounded-lg p-4">
+                    {newTestCaseForm.testSteps.map((step, index) => (
+                      <div key={index} className="bg-surface-muted rounded-lg p-4 border border-subtle">
                        <div className="flex justify-between items-center mb-3">
-                         <h5 className="font-medium text-charcoal">Step {step.stepNumber}</h5>
+                          <h5 className="font-medium text-foreground">Step {step.stepNumber}</h5>
                          <button
                            type="button"
                            onClick={() => removeTestStep(index, 'new')}
@@ -1323,7 +1363,7 @@ const TestCases = () => {
                        
                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                          <div>
-                           <label className="block text-xs font-medium text-slate mb-1">
+                            <label className="block text-xs font-medium text-menu mb-1">
                              Description <span className="text-red-500">*</span>
                            </label>
                            <textarea
@@ -1337,7 +1377,7 @@ const TestCases = () => {
                          </div>
                          
                          <div>
-                           <label className="block text-xs font-medium text-slate mb-1">
+                            <label className="block text-xs font-medium text-menu mb-1">
                              Test Data
                            </label>
                            <input
@@ -1350,7 +1390,7 @@ const TestCases = () => {
                          </div>
                          
                          <div>
-                           <label className="block text-xs font-medium text-slate mb-1">
+                            <label className="block text-xs font-medium text-menu mb-1">
                              Expected Result <span className="text-red-500">*</span>
                            </label>
                            <textarea
@@ -1364,7 +1404,7 @@ const TestCases = () => {
                          </div>
                          
                          <div>
-                           <label className="block text-xs font-medium text-slate mb-1">
+                            <label className="block text-xs font-medium text-menu mb-1">
                              Step Status
                            </label>
                            <select 
@@ -1381,7 +1421,7 @@ const TestCases = () => {
                        </div>
                        
                        <div className="mt-3">
-                         <label className="block text-xs font-medium text-slate mb-1">
+                          <label className="block text-xs font-medium text-menu mb-1">
                            Notes/Comments
                          </label>
                          <textarea
@@ -1420,66 +1460,81 @@ const TestCases = () => {
       {/* View Test Case Modal */}
       {showViewTestCaseModal && selectedTestCase && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <motion.div
+           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-2xl p-6 w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto"
+             className="tc-testcase-form tc-testcase-view bg-card border border-subtle rounded-2xl p-6 w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto"
           >
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-semibold text-charcoal">Test Case Details</h3>
+               <h3 className="text-xl font-semibold text-foreground">Test Case Details</h3>
               <button
                 onClick={() => setShowViewTestCaseModal(false)}
-                className="p-2 text-slate hover:text-charcoal transition-colors"
+                 className="p-2 text-menu hover:text-white hover:bg-white/10 rounded transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
             
-            <div className="space-y-6">
+            <div className="space-y-6 text-foreground">
               {/* Test Case Header */}
               <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <h4 className="font-semibold text-charcoal mb-2">Basic Information</h4>
-                  <div className="space-y-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Info className="h-5 w-5 text-[rgb(var(--tc-icon))]" />
+                    <h4 className="text-lg font-medium text-foreground">Basic Information</h4>
+                  </div>
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <span className="text-sm font-medium text-slate">Test Case ID:</span>
-                      <p className="text-charcoal">{selectedTestCase.tcid}</p>
+                      <label className="block text-sm font-medium text-foreground mb-2">Test Case ID (TCID)</label>
+                      <input disabled className="input-field" value={selectedTestCase.tcid} />
                     </div>
                     <div>
-                      <span className="text-sm font-medium text-slate">Name:</span>
-                      <p className="text-charcoal">{selectedTestCase.name}</p>
+                      <label className="block text-sm font-medium text-foreground mb-2">Test Case Name</label>
+                      <input disabled className="input-field" value={selectedTestCase.name} />
                     </div>
                     <div>
-                      <span className="text-sm font-medium text-slate">Author:</span>
-                      <p className="text-charcoal">{selectedTestCase.author}</p>
+                      <label className="block text-sm font-medium text-foreground mb-2">Author</label>
+                      <input disabled className="input-field" value={selectedTestCase.author} />
                     </div>
                     <div>
-                      <span className="text-sm font-medium text-slate">Test Type:</span>
-                      <p className="text-charcoal">{selectedTestCase.testType}</p>
+                      <label className="block text-sm font-medium text-foreground mb-2">Test Type</label>
+                      <input disabled className="input-field" value={selectedTestCase.testType} />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">Priority</label>
+                      <div className="relative w-full">
+                        <div className="input-field pr-24"></div>
+                        <span className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs px-2 py-1 rounded-full ${priorityPill(selectedTestCase.priority || getPriorityFromTestType(selectedTestCase.testType))}`}>
+                          {selectedTestCase.priority || getPriorityFromTestType(selectedTestCase.testType)}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
                 
                 <div>
-                  <h4 className="font-semibold text-charcoal mb-2">Status & Results</h4>
-                  <div className="space-y-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <BarChart3 className="h-5 w-5 text-[rgb(var(--tc-icon))]" />
+                    <h4 className="text-lg font-medium text-foreground">Status & Results</h4>
+                  </div>
+                   <div className="space-y-3">
                     <div>
-                      <span className="text-sm font-medium text-slate">Overall Result:</span>
+                       <span className="text-sm font-medium text-menu">Overall Result:</span>
                       <span className={`ml-2 text-xs px-2 py-1 rounded-full ${statusColors[selectedTestCase.overallResult]}`}>
                         {selectedTestCase.overallResult}
                       </span>
                     </div>
                     <div>
-                      <span className="text-sm font-medium text-slate">Total Steps:</span>
-                      <p className="text-charcoal">{selectedTestCase.testSteps.length}</p>
+                       <span className="text-sm font-medium text-menu">Total Steps:</span>
+                       <p className="text-foreground">{selectedTestCase.testSteps.length}</p>
                     </div>
                     <div>
-                      <span className="text-sm font-medium text-slate">Passed Steps:</span>
-                      <p className="text-charcoal">{selectedTestCase.testSteps.filter(step => step.stepStatus === 'Passed').length}</p>
+                       <span className="text-sm font-medium text-menu">Passed Steps:</span>
+                       <p className="text-foreground">{selectedTestCase.testSteps.filter(step => step.stepStatus === 'Passed').length}</p>
                     </div>
                     <div>
-                      <span className="text-sm font-medium text-slate">Failed Steps:</span>
-                      <p className="text-charcoal">{selectedTestCase.testSteps.filter(step => step.stepStatus === 'Failed').length}</p>
+                       <span className="text-sm font-medium text-menu">Failed Steps:</span>
+                       <p className="text-foreground">{selectedTestCase.testSteps.filter(step => step.stepStatus === 'Failed').length}</p>
                     </div>
                   </div>
                 </div>
@@ -1487,49 +1542,62 @@ const TestCases = () => {
 
               {/* Description */}
               <div>
-                <h4 className="font-semibold text-charcoal mb-2">Description/Objective</h4>
-                <p className="text-slate bg-slate-light p-3 rounded-lg">{selectedTestCase.description}</p>
+                 <div className="flex items-center gap-2 mb-2">
+                   <ClipboardList className="h-5 w-5 text-[rgb(var(--tc-icon))]" />
+                   <h4 className="text-lg font-medium text-foreground">Description/Objective</h4>
+                 </div>
+                 <textarea disabled className="input-field" rows="3" value={selectedTestCase.description} />
               </div>
 
               {/* Prerequisites */}
               {selectedTestCase.prerequisites && (
                 <div>
-                  <h4 className="font-semibold text-charcoal mb-2">Pre-Requisites</h4>
-                  <p className="text-slate bg-slate-light p-3 rounded-lg">{selectedTestCase.prerequisites}</p>
+                   <div className="flex items-center gap-2 mb-2">
+                     <ListChecks className="h-5 w-5 text-[rgb(var(--tc-icon))]" />
+                     <h4 className="text-lg font-medium text-foreground">Pre-Requisites</h4>
+                   </div>
+                   <textarea disabled className="input-field" rows="2" value={selectedTestCase.prerequisites} />
                 </div>
               )}
 
               {/* Test Steps */}
               <div>
-                <h4 className="font-semibold text-charcoal mb-4">Test Steps</h4>
+                <div className="flex items-center gap-2 mb-4">
+                  <ListOrdered className="h-5 w-5 text-[rgb(var(--tc-icon))]" />
+                  <h4 className="text-lg font-medium text-foreground">Test Steps</h4>
+                </div>
                 <div className="space-y-4">
                   {selectedTestCase.testSteps.map((step, index) => (
-                    <div key={index} className="bg-white border border-grey-light rounded-lg p-4">
+                    <div key={index} className="step-card border border-subtle p-4 rounded-lg">
                       <div className="flex items-center justify-between mb-3">
-                        <h5 className="font-medium text-charcoal">Step {step.stepNumber}</h5>
+                         <h5 className="font-medium text-foreground">Step {step.stepNumber}</h5>
                         <span className={`text-xs px-2 py-1 rounded-full ${statusColors[step.stepStatus]}`}>
                           {step.stepStatus}
                         </span>
                       </div>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <span className="font-medium text-slate">Description:</span>
-                          <p className="text-charcoal mt-1">{step.description}</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <label className="block text-sm font-medium text-foreground mb-1">Description</label>
+                            <textarea disabled className="input-field" rows="2" value={step.description} />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-foreground mb-1">Test Data</label>
+                            <textarea disabled className="input-field" rows="2" value={step.testData} />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-foreground mb-1">Expected Result</label>
+                            <textarea disabled className="input-field" rows="2" value={step.expectedResult} />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-foreground mb-1">Actual Result</label>
+                            <textarea disabled className="input-field" rows="2" value={step.actualResult || 'Not recorded'} />
+                          </div>
+                          <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-foreground mb-1">Notes</label>
+                            <textarea disabled className="input-field" rows="2" value={step.notes || ''} />
+                          </div>
                         </div>
-                        <div>
-                          <span className="font-medium text-slate">Test Data:</span>
-                          <p className="text-charcoal mt-1">{step.testData}</p>
-                        </div>
-                        <div>
-                          <span className="font-medium text-slate">Expected Result:</span>
-                          <p className="text-charcoal mt-1">{step.expectedResult}</p>
-                        </div>
-                        <div>
-                          <span className="font-medium text-slate">Actual Result:</span>
-                          <p className="text-charcoal mt-1">{step.actualResult || 'Not recorded'}</p>
-                        </div>
-                      </div>
                       
                       {step.notes && (
                         <div className="mt-3">
@@ -1549,26 +1617,30 @@ const TestCases = () => {
       {/* Edit Test Case Modal */}
       {showEditTestCaseModal && selectedTestCase && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <motion.div
+           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto"
+             className="bg-card border border-subtle rounded-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto"
           >
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-semibold text-charcoal">Edit Test Case</h3>
+               <h3 className="text-xl font-semibold text-foreground">Edit Test Case</h3>
               <button
                 onClick={() => setShowEditTestCaseModal(false)}
-                className="p-2 text-slate hover:text-charcoal transition-colors"
+                 className="p-2 hover:bg-white/10 rounded-lg transition-colors"
               >
-                <X className="w-5 h-5" />
+                <X className="w-5 h-5 text-menu" />
               </button>
             </div>
             
-            <form onSubmit={handleEditTestCaseSubmit} className="space-y-6">
+            <form onSubmit={handleEditTestCaseSubmit} className="tc-testcase-form tc-testcase-edit space-y-6">
               {/* Basic Information */}
+              <div className="flex items-center gap-2">
+                <Info className="h-5 w-5 text-[rgb(var(--tc-icon))]" />
+                <h4 className="text-lg font-medium text-foreground">Basic Information</h4>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-charcoal mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Test Case ID (TCID) <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -1582,7 +1654,7 @@ const TestCases = () => {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-charcoal mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Test Case Name <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -1597,7 +1669,11 @@ const TestCases = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-charcoal mb-2">
+                <div className="flex items-center gap-2 mb-2">
+                  <ClipboardList className="h-5 w-5 text-[rgb(var(--tc-icon))]" />
+                  <h4 className="text-lg font-medium text-foreground">Description/Objective</h4>
+                </div>
+                <label className="block text-sm font-medium text-foreground mb-2">
                   Description/Objective <span className="text-red-500">*</span>
                 </label>
                 <textarea
@@ -1610,6 +1686,10 @@ const TestCases = () => {
                 />
               </div>
 
+              <div className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-[rgb(var(--tc-icon))]" />
+                <h4 className="text-lg font-medium text-foreground">Status & Results</h4>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-charcoal mb-2">
@@ -1626,7 +1706,7 @@ const TestCases = () => {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-charcoal mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Test Type
                   </label>
                   <select 
@@ -1644,7 +1724,22 @@ const TestCases = () => {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-charcoal mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Priority
+                  </label>
+                  <select
+                    className="input-field"
+                    value={editTestCaseForm.priority}
+                    onChange={(e) => setEditTestCaseForm(prev => ({ ...prev, priority: e.target.value }))}
+                  >
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Overall Test Result
                   </label>
                   <select 
@@ -1661,14 +1756,18 @@ const TestCases = () => {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-charcoal mb-2">
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <ListOrdered className="h-5 w-5 text-[rgb(var(--tc-icon))]" />
+                    <h4 className="text-lg font-medium text-foreground">Pre-Requisites</h4>
+                  </div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
                   Test Pre-Requisites
                 </label>
                 <textarea
                   placeholder="Describe system and data requirements needed prior to execution..."
                   rows="2"
-                  className="input-field"
+                    className="input-field"
                   value={editTestCaseForm.prerequisites}
                   onChange={(e) => setEditTestCaseForm(prev => ({ ...prev, prerequisites: e.target.value }))}
                 />
@@ -1677,7 +1776,10 @@ const TestCases = () => {
               {/* Test Steps Section */}
               <div>
                 <div className="flex justify-between items-center mb-4">
-                  <h4 className="text-lg font-semibold text-charcoal">Test Steps</h4>
+                  <div className="flex items-center gap-2">
+                    <ListChecks className="h-5 w-5 text-[rgb(var(--tc-icon))]" />
+                    <h4 className="text-lg font-medium text-foreground">Test Steps</h4>
+                  </div>
                   <button
                     type="button"
                     onClick={() => addTestStep('edit')}
@@ -1688,11 +1790,11 @@ const TestCases = () => {
                   </button>
                 </div>
                 
-                <div className="space-y-4">
+                    <div className="space-y-4">
                   {editTestCaseForm.testSteps.map((step, index) => (
-                    <div key={index} className="bg-slate-light rounded-lg p-4">
+                    <div key={index} className="bg-surface-muted rounded-lg p-4 border border-subtle">
                       <div className="flex justify-between items-center mb-3">
-                        <h5 className="font-medium text-charcoal">Step {step.stepNumber}</h5>
+                        <h5 className="font-medium text-foreground">Step {step.stepNumber}</h5>
                         <button
                           type="button"
                           onClick={() => removeTestStep(index, 'edit')}
@@ -1704,7 +1806,7 @@ const TestCases = () => {
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-xs font-medium text-slate mb-1">
+                          <label className="block text-xs font-medium text-foreground mb-1">
                             Description <span className="text-red-500">*</span>
                           </label>
                           <textarea
@@ -1718,7 +1820,7 @@ const TestCases = () => {
                         </div>
                         
                         <div>
-                          <label className="block text-xs font-medium text-slate mb-1">
+                          <label className="block text-xs font-medium text-foreground mb-1">
                             Test Data
                           </label>
                           <input
@@ -1731,7 +1833,7 @@ const TestCases = () => {
                         </div>
                         
                         <div>
-                          <label className="block text-xs font-medium text-slate mb-1">
+                          <label className="block text-xs font-medium text-foreground mb-1">
                             Expected Result <span className="text-red-500">*</span>
                           </label>
                           <textarea
@@ -1745,7 +1847,7 @@ const TestCases = () => {
                         </div>
                         
                         <div>
-                          <label className="block text-xs font-medium text-slate mb-1">
+                          <label className="block text-xs font-medium text-foreground mb-1">
                             Actual Result
                           </label>
                           <textarea
@@ -1758,9 +1860,7 @@ const TestCases = () => {
                         </div>
                         
                         <div>
-                          <label className="block text-xs font-medium text-slate mb-1">
-                            Step Status
-                          </label>
+                          <label className="block text-xs font-medium text-foreground mb-1">Step Status</label>
                           <select 
                             className="input-field text-sm"
                             value={step.stepStatus}
@@ -1774,13 +1874,11 @@ const TestCases = () => {
                         </div>
                       </div>
                       
-                      <div className="mt-3">
-                        <label className="block text-xs font-medium text-slate mb-1">
-                          Notes/Comments
-                        </label>
+                      <div className="mt-3 md:col-span-2">
+                        <label className="block text-xs font-medium text-foreground mb-1">Notes/Comments</label>
                         <textarea
                           placeholder="Additional notes..."
-                          rows="1"
+                          rows="2"
                           className="input-field text-sm"
                           value={step.notes}
                           onChange={(e) => updateTestStep(index, 'notes', e.target.value, 'edit')}
