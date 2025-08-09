@@ -14,14 +14,14 @@ service cloud.firestore {
     
     function isAppAdmin() {
       let userData = getUserData();
-      return userData != null && userData.roles.hasAny(['APP_ADMIN']);
+      return userData != null && userData.roles != null && ('APP_ADMIN' in userData.roles);
     }
     
     function isOrgAdmin(organizationId) {
       let userData = getUserData();
       return userData != null && 
              userData.organisationId == organizationId && 
-             userData.roles.hasAny(['ORG_ADMIN']);
+             userData.roles != null && ('ORG_ADMIN' in userData.roles);
     }
     
     function isOrgMember(organizationId) {

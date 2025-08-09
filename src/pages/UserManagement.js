@@ -82,8 +82,34 @@ const UserManagement = () => {
 
 
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString();
+  const formatDate = (value) => {
+    if (!value) return '—';
+    // Firestore Timestamp (client SDK)
+    if (typeof value.toDate === 'function') {
+      try {
+        const d = value.toDate();
+        const dd = String(d.getDate()).padStart(2, '0');
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const yyyy = d.getFullYear();
+        return `${dd}/${mm}/${yyyy}`;
+      } catch (_) {}
+    }
+    // Plain object with seconds/nanoseconds (e.g., serialized Timestamp)
+    if (typeof value === 'object' && typeof value.seconds === 'number') {
+      const d = new Date(value.seconds * 1000);
+      if (isNaN(d.getTime())) return '—';
+      const dd = String(d.getDate()).padStart(2, '0');
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const yyyy = d.getFullYear();
+      return `${dd}/${mm}/${yyyy}`;
+    }
+    // ISO string or epoch
+    const d = new Date(value);
+    if (isNaN(d.getTime())) return '—';
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
   };
 
   // Show loading state while checking authentication

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { USER_ROLES } from '../services/authService';
+import { organizationService } from '../services/organizationService';
 import OrganizationPanel from './OrganizationPanel';
 import UserForm from './UserForm';
 import OrganizationForm from './organizations/OrganizationForm';
@@ -21,6 +22,7 @@ const SuperUserDashboard = () => {
   const [openOrgViewDialog, setOpenOrgViewDialog] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState(null);
   const [alert, setAlert] = useState({ show: false, message: '', severity: 'success' });
+  const [organizationStats, setOrganizationStats] = useState({});
 
   useEffect(() => {
     // Load organizations from Firestore
@@ -28,10 +30,12 @@ const SuperUserDashboard = () => {
   }, []);
 
   const loadData = async () => {
+    let loadedOrgs = [];
     try {
       // Load organizations from Firestore
-      const orgs = await getOrganizations();
-      setOrganizations(orgs);
+      loadedOrgs = await getOrganizations();
+      setOrganizations(loadedOrgs);
+      setAlert({ show: false, message: '', severity: 'success' });
     } catch (error) {
       console.error('Error loading data:', error);
       setAlert({
@@ -39,6 +43,38 @@ const SuperUserDashboard = () => {
         message: 'Error loading organizations',
         severity: 'error',
       });
+      return; // Do not attempt stats if orgs failed to load
+    }
+
+    // Fetch stats for each organization (users/projects) but never block UI
+    try {
+      // Use the freshly loaded organizations we just fetched above
+      const orgsForStats = Array.isArray(loadedOrgs) ? loadedOrgs : [];
+      if (orgsForStats.length > 0) {
+        const statsPromises = orgsForStats.map((org) => {
+          const orgKey = org.organisationId || org.id;
+          return organizationService.getOrganizationStats(orgKey);
+        });
+        const results = await Promise.allSettled(statsPromises);
+        const statsMap = {};
+        orgsForStats.forEach((org, index) => {
+          const res = results[index];
+          const value = res.status === 'fulfilled' ? res.value : { totalUsers: 0, totalProjects: 0 };
+          const keyByOrganisationId = org.organisationId;
+          const keyById = org.id;
+          if (keyByOrganisationId) {
+            statsMap[keyByOrganisationId] = value;
+          }
+          if (keyById) {
+            statsMap[keyById] = value;
+          }
+        });
+        setOrganizationStats(statsMap);
+      } else {
+        setOrganizationStats({});
+      }
+    } catch (statsError) {
+      console.warn('Organization stats unavailable:', statsError);
     }
   };
 
@@ -152,10 +188,7 @@ const SuperUserDashboard = () => {
               <OrganizationPanel
                 key={org.organisationId}
                 organization={org}
-                stats={{
-                  totalUsers: 0, // This will be calculated when we have user data
-                  totalProjects: 0 // This will be calculated when we have project data
-                }}
+                stats={organizationStats[org.organisationId]}
                 onClick={handleOrganizationClick}
               />
             ))

@@ -8,6 +8,12 @@ This document defines the consistent design system for all forms within the Test
 
 ## 2. Design Principles
 
+### 2.0 Data Access Principles (RBAC & Performance)
+- **Least-privilege reads**: Forms must only read the minimum data necessary to render. Never load entire collections and filter client-side when a subset can be fetched directly.
+- **Role-scoped queries**: For `ORG_ADMIN` users, fetch only their `organisationId` resources (e.g., load a single organization document) instead of querying all organizations.
+- **Security-rule alignment**: All form data access patterns must comply with Firestore rules to avoid permission errors and reduce over-fetching.
+- **Cost & latency**: Prefer targeted document reads and indexed queries; avoid N-scan or fan-out reads that grow with tenant count.
+
 ### 2.1 Visual Hierarchy
 - **Clear section grouping** with descriptive headers and icons
 - **Logical field ordering** from most important to least important

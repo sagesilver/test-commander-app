@@ -139,25 +139,36 @@ export const AuthProvider = ({ children }) => {
   };
 
   const getOrganizations = async () => {
-    // Load organizations directly from database
+    // App Admin: can load all organizations
     if (currentUserData?.roles?.includes(USER_ROLES.APP_ADMIN)) {
       const orgs = await organizationService.getAllOrganizations();
       return orgs.filter(org => org.isActive !== false);
-    } else if (currentUserData?.organisationId) {
-      const orgs = await organizationService.getAllOrganizations();
-      return orgs.filter(o => o.organisationId === currentUserData.organisationId && o.isActive !== false);
     }
+
+    // Org Admin: restricted to their own organization only
+    if (currentUserData?.roles?.includes(USER_ROLES.ORG_ADMIN) && currentUserData?.organisationId) {
+      const org = await organizationService.getOrganization(currentUserData.organisationId);
+      if (org && org.isActive !== false) {
+        return [org];
+      }
+      return [];
+    }
+
     return [];
   };
 
   const getAllOrganizations = async () => {
-    // Load all organizations directly from database
+    // App Admin: load all organizations
     if (currentUserData?.roles?.includes(USER_ROLES.APP_ADMIN)) {
       return await organizationService.getAllOrganizations();
-    } else if (currentUserData?.organisationId) {
-      const orgs = await organizationService.getAllOrganizations();
-      return orgs.filter(o => o.organisationId === currentUserData.organisationId);
     }
+
+    // Org Admin: only their own organization
+    if (currentUserData?.roles?.includes(USER_ROLES.ORG_ADMIN) && currentUserData?.organisationId) {
+      const org = await organizationService.getOrganization(currentUserData.organisationId);
+      return org ? [org] : [];
+    }
+
     return [];
   };
 

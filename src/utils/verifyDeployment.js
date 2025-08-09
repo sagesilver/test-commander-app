@@ -2,7 +2,7 @@
 // This helps verify that the authentication and database setup is working correctly
 
 import { auth, db } from "../services/firebase";
-import { doc, getDoc, collection, getDocs } from "firebase/firestore";
+import { doc, getDoc, collection, getDocs, query, limit } from "firebase/firestore";
 
 export const verifyDeployment = async () => {
   const results = {
@@ -27,11 +27,16 @@ export const verifyDeployment = async () => {
       results.errors.push('No authenticated user found');
     }
 
-    // 2. Check Firestore Connection
+    // 2. Check Firestore Connection (via allowed read)
     console.log('2. Checking Firestore connection...');
     try {
-      // Try to read from a test document
-      const testDoc = await getDoc(doc(db, 'test', 'connection'));
+      if (currentUser) {
+        // Read own user doc; permitted by rules if auth is valid
+        await getDoc(doc(db, 'users', currentUser.uid));
+      } else {
+        // Fallback: attempt a benign read (may be denied by rules when signed out)
+        await getDoc(doc(db, '__healthcheck__', 'ping'));
+      }
       results.firestore = true;
       console.log('✅ Firestore: Connection successful');
     } catch (error) {
@@ -39,44 +44,52 @@ export const verifyDeployment = async () => {
       results.errors.push(`Firestore connection failed: ${error.message}`);
     }
 
-    // 3. Check App Admin Record
+    // 3. Check App Admin Role on user record
     console.log('3. Checking app admin record...');
     if (currentUser) {
       try {
-        // Check by userId
-        let appAdminDoc = await getDoc(doc(db, "appAdmins", currentUser.uid));
-        
-        // If not found, check by email
-        if (!appAdminDoc.exists()) {
-          appAdminDoc = await getDoc(doc(db, "appAdmins", currentUser.email));
+        const userDoc = await getDoc(doc(db, "users", currentUser.uid));
+        const data = userDoc.exists() ? userDoc.data() : null;
+        let isAdmin = false;
+        if (data) {
+          const roles = data.roles;
+          if (Array.isArray(roles)) {
+            isAdmin = roles.includes("APP_ADMIN");
+          } else if (roles && typeof roles === 'object') {
+            isAdmin = roles.APP_ADMIN === true || Object.prototype.hasOwnProperty.call(roles, 'APP_ADMIN');
+          } else if (typeof roles === 'string') {
+            isAdmin = roles === 'APP_ADMIN';
+          }
         }
-        
-        if (appAdminDoc.exists()) {
+        if (isAdmin) {
           results.appAdmin = true;
-          console.log('✅ App Admin: Record found');
+          console.log('✅ App Admin: Role found on user');
         } else {
-          console.log('❌ App Admin: No record found');
-          results.errors.push('App admin record not found');
+          console.log('ℹ️ App Admin: Role not found on user');
         }
       } catch (error) {
-        console.log('❌ App Admin: Error checking record', error.message);
+        console.log('❌ App Admin: Error checking user record', error.message);
         results.errors.push(`App admin check failed: ${error.message}`);
       }
     }
 
-    // 4. List Available Collections
-    console.log('4. Checking available collections...');
+    // 4. Check accessible collections (sample reads)
+    console.log('4. Checking accessible collections...');
     try {
-      const collections = await getDocs(collection(db, ''));
-      const collectionNames = [];
-      collections.forEach(doc => {
-        collectionNames.push(doc.id);
-      });
-      results.collections = collectionNames;
-      console.log('✅ Collections found:', collectionNames);
+      const accessible = [];
+      if (currentUser) {
+        // User doc was readable above; consider 'users' accessible
+        accessible.push('users');
+      }
+      if (results.appAdmin) {
+        // As app admin, attempt to read organizations
+        await getDocs(query(collection(db, 'organizations'), limit(1)));
+        accessible.push('organizations');
+      }
+      results.collections = accessible;
+      console.log('✅ Collections accessible:', accessible);
     } catch (error) {
-      console.log('❌ Collections: Error listing collections', error.message);
-      results.errors.push(`Collection listing failed: ${error.message}`);
+      console.log('ℹ️ Collections: Limited access', error.message);
     }
 
     // 5. Summary

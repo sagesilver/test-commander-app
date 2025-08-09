@@ -28,6 +28,7 @@ const Dashboard = () => {
   const [organizations, setOrganizations] = useState([]);
   const [organizationStats, setOrganizationStats] = useState({});
   const [loading, setLoading] = useState(true);
+  const [orgUsersCount, setOrgUsersCount] = useState(0);
   const navigate = useNavigate();
 
   // Load organizations from database for App Admin
@@ -67,6 +68,24 @@ const Dashboard = () => {
     loadOrganizations();
   }, [currentUserData]);
 
+  // Load users count for Org Admins
+  useEffect(() => {
+    const fetchOrgUsers = async () => {
+      try {
+        if (currentUserData?.roles?.includes('ORG_ADMIN') && currentOrganization?.organisationId) {
+          const users = await getUsers(currentOrganization.organisationId);
+          setOrgUsersCount(Array.isArray(users) ? users.length : 0);
+        } else {
+          setOrgUsersCount(0);
+        }
+      } catch (e) {
+        console.error('Error loading organization users:', e);
+        setOrgUsersCount(0);
+      }
+    };
+    fetchOrgUsers();
+  }, [currentUserData, currentOrganization, getUsers]);
+
   // Mock data for charts
   const testProgressData = [
     { name: 'System', completed: 85, total: 100 },
@@ -96,15 +115,14 @@ const Dashboard = () => {
       const totalProjects = Object.values(organizationStats || {}).reduce((sum, stats) => sum + (stats?.totalProjects || 0), 0);
       const activeOrgs = (organizations || []).filter(org => org?.isActive).length;
       return [
-        { title: 'Total Organizations', value: (organizations || []).length.toString(), icon: Building, color: 'text-blue-600' },
-        { title: 'Total Users', value: (totalUsers || 0).toString(), icon: Users, color: 'text-green-600' },
-        { title: 'Active Organizations', value: (activeOrgs || 0).toString(), icon: CheckCircle, color: 'text-green-500' },
-        { title: 'Total Projects', value: (totalProjects || 0).toString(), icon: FileText, color: 'text-blue-500' },
+        { title: 'Total Organizations', value: String((organizations || []).length), icon: Building, color: 'text-blue-600' },
+        { title: 'Total Users', value: String(totalUsers || 0), icon: Users, color: 'text-green-600' },
+        { title: 'Active Organizations', value: String(activeOrgs || 0), icon: CheckCircle, color: 'text-green-500' },
+        { title: 'Total Projects', value: String(totalProjects || 0), icon: FileText, color: 'text-blue-500' },
       ];
     } else if (currentUserData?.roles?.includes('ORG_ADMIN')) {
-      const orgUsers = getUsers(currentOrganization?.organisationId) || [];
       return [
-        { title: 'Total Users', value: (orgUsers.length || 0).toString(), icon: Users, color: 'text-blue-600' },
+        { title: 'Total Users', value: String(orgUsersCount || 0), icon: Users, color: 'text-blue-600' },
         { title: 'Active Projects', value: '5', icon: FileText, color: 'text-green-600' },
         { title: 'Active Defects', value: '23', icon: AlertTriangle, color: 'text-red-500' },
         { title: 'Test Coverage', value: '87%', icon: CheckCircle, color: 'text-green-500' },

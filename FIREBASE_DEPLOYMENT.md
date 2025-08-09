@@ -309,3 +309,24 @@ After successful deployment:
 3. Configure custom fields and settings
 4. Implement backup and monitoring
 5. Plan for scaling and performance optimization
+
+## Node Scripts Environment Usage
+
+Utility scripts (`setupUsers.js`, `fixUser.js`) require Firebase config via environment variables. Do not hardcode keys.
+
+1. Copy example env and fill values:
+```cmd
+copy .env.example .env
+notepad .env
+```
+2. Install deps (includes dotenv):
+```cmd
+npm install
+```
+3. Run scripts:
+```cmd
+node setupUsers.js
+node fixUser.js
+```
+
+If Google reports exposed keys (e.g., in a public repo URL), rotate the Web API key in Firebase Console and update `.env`.

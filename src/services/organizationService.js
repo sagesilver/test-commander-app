@@ -131,27 +131,57 @@ export const organizationService = {
   
   // Get organization statistics
   async getOrganizationStats(orgId) {
-    const usersQuery = query(
-      collection(db, 'users'),
-      where('organisationId', '==', orgId),
-      where('isActive', '==', true)
-    );
-    const projectsQuery = query(
-      collection(db, 'projects'),
-      where('organisationId', '==', orgId),
-      where('isActive', '==', true)
-    );
-    
-    const [usersSnapshot, projectsSnapshot] = await Promise.all([
-      getDocs(usersQuery),
-      getDocs(projectsQuery)
-    ]);
-    
+    let usersCount = 0;
+    let projectsCount = 0;
+
+    // Try with active filter first; if index/permission issues occur, fall back safely
+    try {
+      try {
+        const usersQueryActive = query(
+          collection(db, 'users'),
+          where('organisationId', '==', orgId),
+          where('isActive', '==', true)
+        );
+        const usersSnapshotActive = await getDocs(usersQueryActive);
+        usersCount = usersSnapshotActive.size;
+      } catch (inner) {
+        const usersQuery = query(
+          collection(db, 'users'),
+          where('organisationId', '==', orgId)
+        );
+        const usersSnapshot = await getDocs(usersQuery);
+        usersCount = usersSnapshot.size;
+      }
+    } catch (_ignored) {
+      usersCount = 0; // permission denied or other error
+    }
+
+    try {
+      try {
+        const projectsQueryActive = query(
+          collection(db, 'projects'),
+          where('organisationId', '==', orgId),
+          where('isActive', '==', true)
+        );
+        const projectsSnapshotActive = await getDocs(projectsQueryActive);
+        projectsCount = projectsSnapshotActive.size;
+      } catch (inner) {
+        const projectsQuery = query(
+          collection(db, 'projects'),
+          where('organisationId', '==', orgId)
+        );
+        const projectsSnapshot = await getDocs(projectsQuery);
+        projectsCount = projectsSnapshot.size;
+      }
+    } catch (_ignored) {
+      projectsCount = 0; // permission denied or other error; safe default
+    }
+
     return {
-      totalUsers: usersSnapshot.size,
-      totalProjects: projectsSnapshot.size,
-      activeUsers: usersSnapshot.size,
-      activeProjects: projectsSnapshot.size
+      totalUsers: usersCount,
+      totalProjects: projectsCount,
+      activeUsers: usersCount,
+      activeProjects: projectsCount,
     };
   },
 

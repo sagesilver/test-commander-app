@@ -152,8 +152,31 @@ const Projects = () => {
     );
   };
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString();
+  const formatDate = (value) => {
+    if (!value) return '—';
+    if (typeof value.toDate === 'function') {
+      try {
+        const d = value.toDate();
+        const dd = String(d.getDate()).padStart(2, '0');
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const yyyy = d.getFullYear();
+        return `${dd}/${mm}/${yyyy}`;
+      } catch (_) {}
+    }
+    if (typeof value === 'object' && typeof value.seconds === 'number') {
+      const d = new Date(value.seconds * 1000);
+      if (isNaN(d.getTime())) return '—';
+      const dd = String(d.getDate()).padStart(2, '0');
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const yyyy = d.getFullYear();
+      return `${dd}/${mm}/${yyyy}`;
+    }
+    const d = new Date(value);
+    if (isNaN(d.getTime())) return '—';
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
   };
 
   // Show loading state while checking authentication

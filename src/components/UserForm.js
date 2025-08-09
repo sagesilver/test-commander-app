@@ -55,10 +55,10 @@ const UserForm = ({ isOpen, onClose, onSuccess }) => {
       setAvailableRoles(roles);
 
       // Set default organization for Org Admins
-      if (currentUserData.roles.includes(USER_ROLES.ORG_ADMIN) && currentUserData.organizationId) {
+      if (currentUserData.roles.includes(USER_ROLES.ORG_ADMIN) && currentUserData.organisationId) {
         setFormData(prev => ({
           ...prev,
-          organisationId: currentUserData.organizationId,
+          organisationId: currentUserData.organisationId,
         }));
       }
     } catch (error) {
@@ -94,7 +94,7 @@ const UserForm = ({ isOpen, onClose, onSuccess }) => {
       const hasPermission = validateUserCreationPermissions(
         currentUserData.roles,
         formData.roles,
-        currentUserData.organizationId,
+        currentUserData.organisationId,
         formData.organisationId
       );
 
@@ -142,7 +142,7 @@ const UserForm = ({ isOpen, onClose, onSuccess }) => {
           name: '',
           email: '',
           roles: [],
-          organisationId: currentUserData.roles.includes(USER_ROLES.ORG_ADMIN) ? currentUserData.organizationId : '',
+          organisationId: currentUserData.roles.includes(USER_ROLES.ORG_ADMIN) ? currentUserData.organisationId : '',
           profile: {
             department: '',
             position: '',

@@ -208,3 +208,27 @@ return {
 2. **Real UID from start** (prevents UUID mismatch)
 3. **Client-side email trigger** (ensures delivery)
 4. **Immediate Firestore doc creation** (prevents white screen)
+
+## Secrets and Environment (Node Scripts)
+
+To prevent exposure of Firebase config in scripts, Node utilities (e.g., `setupUsers.js`, `fixUser.js`) must load configuration from environment variables via `dotenv`.
+
+- Create `.env` from `.env.example`
+- Prefer `FIREBASE_*` variables for Node scripts; frontend uses `REACT_APP_*`
+- The scripts will exit with an error if required vars are missing
+- Rotate keys in Firebase Console if a key was previously exposed; update `.env`
+
+Required variables for Node scripts:
+- `FIREBASE_API_KEY`
+- `FIREBASE_AUTH_DOMAIN`
+- `FIREBASE_PROJECT_ID`
+- `FIREBASE_STORAGE_BUCKET`
+- `FIREBASE_MESSAGING_SENDER_ID`
+- `FIREBASE_APP_ID`
+- `FIREBASE_MEASUREMENT_ID` (optional)
+
+Run examples (Windows CMD):
+- `copy .env.example .env`
+- `notepad .env` (fill values)
+- `node setupUsers.js`
+- `node fixUser.js`
