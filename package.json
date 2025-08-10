@@ -4,7 +4,9 @@
   "description": "Modern test case and defect management platform",
   "private": true,
   "dependencies": {
-    
+    "papaparse": "^5.4.1",
+    "xlsx": "^0.18.5",
+    "file-saver": "^2.0.5",
     "@tanstack/react-table": "^8.14.1",
     "@tanstack/react-virtual": "^3.0.0",
     "firebase": "^9.23.0",

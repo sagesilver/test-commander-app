@@ -26,6 +26,9 @@ import {
   Info
  } from 'lucide-react';
 import TestCasesGrid from '../components/TestCasesGrid';
+import TagPills from '../components/TagPills';
+import TagMultiSelect from '../components/TagMultiSelect';
+import ExportMenu from '../components/ExportMenu';
 import { useAuth } from '../contexts/AuthContext';
 
 const TestCases = () => {
@@ -40,6 +43,13 @@ const TestCases = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterPriority, setFilterPriority] = useState('all');
   const [filterTestType, setFilterTestType] = useState('all');
+  const [availableTags, setAvailableTags] = useState([
+    { id: 'ui', name: 'UI', color: '#0ea5e9' },
+    { id: 'api', name: 'API', color: '#10b981' },
+    { id: 'regression', name: 'Regression', color: '#f59e0b' },
+    { id: 'security', name: 'Security', color: '#ef4444' },
+  ]);
+  const [selectedTagFilterIds, setSelectedTagFilterIds] = useState([]);
   const [newTestCaseForm, setNewTestCaseForm] = useState({
     tcid: '',
     name: '',
@@ -49,7 +59,8 @@ const TestCases = () => {
     priority: 'Medium',
     overallResult: '',
     prerequisites: '',
-    testSteps: []
+    testSteps: [],
+    tags: []
   });
   const [editTestCaseForm, setEditTestCaseForm] = useState({
     tcid: '',
@@ -60,7 +71,8 @@ const TestCases = () => {
     priority: 'Medium',
     overallResult: '',
     prerequisites: '',
-    testSteps: []
+    testSteps: [],
+    tags: []
   });
   const [testHierarchy, setTestHierarchy] = useState([
     {
@@ -643,6 +655,24 @@ const TestCases = () => {
     return map[p] || map.Medium;
   };
 
+  // Tags helpers
+  const resolveTags = (tagIds) => {
+    if (!Array.isArray(tagIds)) return [];
+    const map = new Map(availableTags.map(t => [t.id, t]));
+    return tagIds.map(id => map.get(id)).filter(Boolean);
+  };
+
+  const addOrUpdateTag = (tag) => {
+    setAvailableTags(prev => {
+      const exists = prev.some(t => t.id === tag.id);
+      return exists ? prev.map(t => (t.id === tag.id ? tag : t)) : [...prev, tag];
+    });
+  };
+
+  const toggleFilterTag = (tagId) => {
+    setSelectedTagFilterIds(prev => prev.includes(tagId) ? prev.filter(id => id !== tagId) : [...prev, tagId]);
+  };
+
   // Helper function to find and update test case in hierarchy
   const updateTestCaseInHierarchy = (tcid, updatedTestCase) => {
     setTestHierarchy(prevHierarchy => {
@@ -714,7 +744,8 @@ const TestCases = () => {
       testType: testCase.testType,
       overallResult: testCase.overallResult,
       prerequisites: testCase.prerequisites || '',
-      testSteps: [...testCase.testSteps]
+      testSteps: [...testCase.testSteps],
+      tags: Array.isArray(testCase.tags) ? [...testCase.tags] : []
     });
     setShowEditTestCaseModal(true);
   };
@@ -855,7 +886,8 @@ const TestCases = () => {
       testType: '',
       overallResult: '',
       prerequisites: '',
-      testSteps: []
+      testSteps: [],
+      tags: []
     });
     setShowNewTestCaseModal(false);
   };
@@ -904,7 +936,8 @@ const TestCases = () => {
               ...tc,
               project: project.name,
               function: function_.name,
-              subsystem: subsystem.name
+              subsystem: subsystem.name,
+              tags: Array.isArray(tc.tags) ? tc.tags : []
             })));
           }
         }
@@ -943,6 +976,12 @@ const TestCases = () => {
         const priority = getPriorityFromTestType(tc.testType);
         return priority === filterPriority;
       });
+    }
+
+    // Tag filter (OR logic)
+    if (selectedTagFilterIds.length > 0) {
+      const selectedSet = new Set(selectedTagFilterIds);
+      testCases = testCases.filter(tc => Array.isArray(tc.tags) && tc.tags.some(id => selectedSet.has(id)));
     }
     
     return testCases;
@@ -1053,7 +1092,7 @@ const TestCases = () => {
                     <div>
                        <h4 className="font-medium text-foreground">{testCase.tcid}: {testCase.name}</h4>
                        <p className="text-sm text-menu mt-1 line-clamp-2">{testCase.description}</p>
-                       <div className="flex items-center space-x-3 mt-2">
+                        <div className="flex items-center space-x-3 mt-2">
                          <span className={`text-xs px-2 py-1 rounded-full ${statusColors[testCase.overallResult]}`}>
                            {testCase.overallResult}
                          </span>
@@ -1066,6 +1105,12 @@ const TestCases = () => {
                          <span className="text-xs text-menu">
                            {testCase.testSteps.length} steps
                         </span>
+                         <div className="ml-2">
+                           <TagPills
+                             tags={resolveTags(testCase.tags)}
+                             onTagClick={(tag) => toggleFilterTag(tag.id)}
+                           />
+                         </div>
                       </div>
                     </div>
                   </div>
@@ -1140,10 +1185,14 @@ const TestCases = () => {
               </option>
             ))}
           </select>
-          <button className="flex items-center space-x-2 px-4 py-2 bg-surface-muted border border-subtle text-white rounded-lg hover:brightness-110 transition-colors whitespace-nowrap">
-            <Download className="w-4 h-4" />
-            <span>Export</span>
-          </button>
+          <ExportMenu
+            label="Export"
+            getRows={() => addPriorityToTestCases(getFilteredTestCases()).map(tc => ({
+              ...tc,
+              Tags: resolveTags(tc.tags).map(t => t.name).join(', '),
+            }))}
+            filenamePrefix="test-cases"
+          />
           <button 
             className="flex items-center space-x-2 px-4 py-2 btn-primary whitespace-nowrap"
             onClick={() => setShowNewTestCaseModal(true)}
@@ -1162,6 +1211,21 @@ const TestCases = () => {
            <h3 className="text-lg font-semibold text-foreground">Test Cases</h3>
            <div className="flex items-center space-x-2">
              <span className="text-sm text-menu">({getFilteredTestCases().length})</span>
+              {/* Tag filter chips */}
+              <div className="hidden md:flex items-center gap-1">
+                {availableTags.map(tag => (
+                  <button
+                    key={tag.id}
+                    type="button"
+                    onClick={() => toggleFilterTag(tag.id)}
+                    className={`rounded-full px-2 py-1 text-xs border transition-colors ${selectedTagFilterIds.includes(tag.id) ? 'text-white' : 'text-white/80'}`}
+                    style={{ backgroundColor: selectedTagFilterIds.includes(tag.id) ? tag.color : 'transparent', borderColor: tag.color }}
+                    title={`Filter by ${tag.name}`}
+                  >
+                    {tag.name}
+                  </button>
+                ))}
+              </div>
              <div className="flex bg-surface-muted rounded-lg p-1 border border-subtle">
                <button
                  onClick={() => setViewMode('tree')}
@@ -1202,6 +1266,8 @@ const TestCases = () => {
              onDuplicateTestCase={handleDuplicateTestCase}
              onBulkEdit={handleBulkEdit}
              onBulkDelete={handleBulkDelete}
+              resolveTags={resolveTags}
+              onFilterByTag={(id) => toggleFilterTag(id)}
            />
          )}
        </div>
@@ -1547,6 +1613,14 @@ const TestCases = () => {
                     </div>
                   </div>
                 </div>
+
+                {/* Tags */}
+                <TagMultiSelect
+                  availableTags={availableTags}
+                  value={newTestCaseForm.tags}
+                  onChange={(ids) => setNewTestCaseForm(prev => ({ ...prev, tags: ids }))}
+                  onAddTag={addOrUpdateTag}
+                />
                 
                 <div>
                   <div className="flex items-center gap-2 mb-2">
@@ -1575,6 +1649,31 @@ const TestCases = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Tags (view-only) */}
+              {Array.isArray(selectedTestCase.tags) && selectedTestCase.tags.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <ClipboardList className="h-5 w-5 text-[rgb(var(--tc-icon))]" />
+                    <h4 className="text-lg font-medium text-foreground">Tags</h4>
+                  </div>
+                  <div className="mt-1">
+                    {/* view-only pills */}
+                    <div className="flex flex-wrap gap-1">
+                      {resolveTags(selectedTestCase.tags).map(tag => (
+                        <span
+                          key={tag.id}
+                          className="rounded-full text-white text-xs px-2 py-0.5"
+                          style={{ backgroundColor: tag.color || '#64748b' }}
+                          title={tag.name}
+                        >
+                          {tag.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Description */}
               <div>
@@ -1791,6 +1890,15 @@ const TestCases = () => {
                   </select>
                 </div>
               </div>
+
+              {/* Tags */}
+              <TagMultiSelect
+                availableTags={availableTags}
+                value={editTestCaseForm.tags}
+                onChange={(ids) => setEditTestCaseForm(prev => ({ ...prev, tags: ids }))}
+                onAddTag={addOrUpdateTag}
+                label="Tags"
+              />
 
                 <div>
                   <div className="flex items-center gap-2 mb-2">

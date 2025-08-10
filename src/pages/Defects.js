@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import DefectsGrid from '../components/DefectsGrid';
+import TagMultiSelect from '../components/TagMultiSelect';
+import TagPills from '../components/TagPills';
 import { 
   Plus, 
   AlertTriangle,
@@ -11,6 +13,7 @@ import {
   Download
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import ExportMenu from '../components/ExportMenu';
 
 const Defects = () => {
   const [showNewDefectModal, setShowNewDefectModal] = useState(false);
@@ -41,7 +44,8 @@ const Defects = () => {
       actualBehavior: 'Payment times out after 30 seconds with error message',
       environment: 'Production - Chrome 120.0.6099.109',
       browser: 'Chrome',
-      os: 'Windows 11'
+      os: 'Windows 11',
+      tags: ['api', 'regression']
     },
     {
       id: 'DEF-002',
@@ -63,7 +67,8 @@ const Defects = () => {
       actualBehavior: 'Broken image icon appears instead of profile picture',
       environment: 'Staging - Firefox 121.0',
       browser: 'Firefox',
-      os: 'macOS 14.1'
+      os: 'macOS 14.1',
+      tags: ['ui']
     },
     {
       id: 'DEF-003',
@@ -85,7 +90,8 @@ const Defects = () => {
       actualBehavior: 'Page remains on first page of results',
       environment: 'Production - Safari 17.1',
       browser: 'Safari',
-      os: 'iOS 17.1'
+      os: 'iOS 17.1',
+      tags: []
     },
     {
       id: 'DEF-004',
@@ -107,9 +113,35 @@ const Defects = () => {
       actualBehavior: 'Content overlaps and buttons are misaligned',
       environment: 'Production - Mobile Safari',
       browser: 'Safari Mobile',
-      os: 'iOS 17.1'
+      os: 'iOS 17.1',
+      tags: ['ui', 'mobile']
     }
   ]);
+
+  // Global tags (mock) and filter
+  const [availableTags, setAvailableTags] = useState([
+    { id: 'ui', name: 'UI', color: '#0ea5e9' },
+    { id: 'api', name: 'API', color: '#10b981' },
+    { id: 'regression', name: 'Regression', color: '#f59e0b' },
+    { id: 'security', name: 'Security', color: '#ef4444' },
+    { id: 'mobile', name: 'Mobile', color: '#8b5cf6' },
+  ]);
+  const [selectedTagFilterIds, setSelectedTagFilterIds] = useState([]);
+
+  const resolveTags = (tagIds) => {
+    if (!Array.isArray(tagIds)) return [];
+    const map = new Map(availableTags.map(t => [t.id, t]));
+    return tagIds.map(id => map.get(id)).filter(Boolean);
+  };
+  const addOrUpdateTag = (tag) => {
+    setAvailableTags(prev => {
+      const exists = prev.some(t => t.id === tag.id);
+      return exists ? prev.map(t => (t.id === tag.id ? tag : t)) : [...prev, tag];
+    });
+  };
+  const toggleFilterTag = (tagId) => {
+    setSelectedTagFilterIds(prev => prev.includes(tagId) ? prev.filter(id => id !== tagId) : [...prev, tagId]);
+  };
 
   const [newDefectForm, setNewDefectForm] = useState({
     title: '',
@@ -124,7 +156,8 @@ const Defects = () => {
     actualBehavior: '',
     environment: '',
     browser: '',
-    os: ''
+    os: '',
+    tags: []
   });
 
   const [editDefectForm, setEditDefectForm] = useState({
@@ -141,7 +174,8 @@ const Defects = () => {
     actualBehavior: '',
     environment: '',
     browser: '',
-    os: ''
+    os: '',
+    tags: []
   });
 
   // Load accessible projects for selector (future filtering)
@@ -204,7 +238,8 @@ const Defects = () => {
       actualBehavior: defect.actualBehavior || '',
       environment: defect.environment || '',
       browser: defect.browser || '',
-      os: defect.os || ''
+      os: defect.os || '',
+      tags: Array.isArray(defect.tags) ? [...defect.tags] : []
     });
     setShowEditDefectModal(true);
   };
@@ -225,7 +260,8 @@ const Defects = () => {
       createdDate: new Date().toISOString().split('T')[0],
       updatedDate: new Date().toISOString().split('T')[0],
       attachments: 0,
-      comments: 0
+      comments: 0,
+      tags: [...newDefectForm.tags]
     };
     
     setDefects(prev => [newDefect, ...prev]);
@@ -242,7 +278,8 @@ const Defects = () => {
       actualBehavior: '',
       environment: '',
       browser: '',
-      os: ''
+      os: '',
+      tags: []
     });
     setShowNewDefectModal(false);
   };
@@ -252,14 +289,23 @@ const Defects = () => {
     const updatedDefect = {
       ...selectedDefect,
       ...editDefectForm,
-      updatedDate: new Date().toISOString().split('T')[0]
+      updatedDate: new Date().toISOString().split('T')[0],
+      tags: [...editDefectForm.tags]
     };
     
     setDefects(prev => prev.map(d => d.id === selectedDefect.id ? updatedDefect : d));
     setShowEditDefectModal(false);
   };
 
-  // Grid provides quick filter and per-column filters; no page-level filters
+  // Filter defects by selected tags (OR-based)
+  const getFilteredDefects = () => {
+    let rows = defects;
+    if (selectedTagFilterIds.length > 0) {
+      const setIds = new Set(selectedTagFilterIds);
+      rows = rows.filter(d => Array.isArray(d.tags) && d.tags.some(id => setIds.has(id)));
+    }
+    return rows;
+  };
 
   return (
     <div className="space-y-6">
@@ -285,14 +331,11 @@ const Defects = () => {
               </option>
             ))}
           </select>
-          <button 
-            className="flex items-center space-x-2 px-4 py-2 bg-surface-muted border border-subtle text-white rounded-lg hover:brightness-110 transition-colors whitespace-nowrap"
-            onClick={() => console.log('Export defects')}
-            title="Export"
-          >
-            <Download className="w-4 h-4" />
-            <span>Export</span>
-          </button>
+          <ExportMenu
+            label="Export"
+            getRows={() => getFilteredDefects().map(d => ({ ...d, Tags: resolveTags(d.tags).map(t => t.name).join(', ') }))}
+            filenamePrefix="defects"
+          />
           <button 
             className="flex items-center space-x-2 px-4 py-2 btn-primary whitespace-nowrap"
             onClick={() => setShowNewDefectModal(true)}
@@ -303,15 +346,44 @@ const Defects = () => {
         </div>
       </div>
 
-      {/* Filtering is handled inside the grid (quick filter + per-column filters) */}
+      {/* Tag filter chips container (below header) */}
+      <div className="card p-3 -mt-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-menu">Filter by tags:</span>
+          {availableTags.map(tag => (
+            <button
+              key={tag.id}
+              type="button"
+              onClick={() => toggleFilterTag(tag.id)}
+              className={`rounded-full px-2 py-1 text-xs border transition-colors ${selectedTagFilterIds.includes(tag.id) ? 'text-white' : 'text-white/80'}`}
+              style={{ backgroundColor: selectedTagFilterIds.includes(tag.id) ? tag.color : 'transparent', borderColor: tag.color }}
+              title={`Filter by ${tag.name}`}
+            >
+              {tag.name}
+            </button>
+          ))}
+          {selectedTagFilterIds.length > 0 && (
+            <button
+              type="button"
+              className="ml-2 text-xs btn-secondary"
+              onClick={() => setSelectedTagFilterIds([])}
+              title="Clear tag filters"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      </div>
 
       {/* Defects Grid */}
-      {defects.length > 0 ? (
+      {getFilteredDefects().length > 0 ? (
         <DefectsGrid 
-          defects={defects}
+          defects={getFilteredDefects()}
           onViewDefect={handleViewDefect}
           onEditDefect={handleEditDefect}
           onDeleteDefect={handleDeleteDefect}
+          resolveTags={resolveTags}
+          onFilterByTag={(id) => toggleFilterTag(id)}
         />
       ) : (
         <div className="card text-center py-12">
@@ -435,6 +507,14 @@ const Defects = () => {
                   />
                 </div>
               </div>
+
+              {/* Tags */}
+              <TagMultiSelect
+                availableTags={availableTags}
+                value={newDefectForm.tags}
+                onChange={(ids) => setNewDefectForm(prev => ({ ...prev, tags: ids }))}
+                onAddTag={addOrUpdateTag}
+              />
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -620,6 +700,23 @@ const Defects = () => {
                       <span className="text-sm font-medium text-menu">Assigned To:</span>
                       <p className="text-foreground">{selectedDefect.assignedTo}</p>
                     </div>
+                    {/* Tags (view-only) */}
+                    {Array.isArray(selectedDefect.tags) && selectedDefect.tags.length > 0 && (
+                      <div>
+                        <span className="text-sm font-medium text-menu">Tags:</span>
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {resolveTags(selectedDefect.tags).map(tag => (
+                            <span
+                              key={tag.id}
+                              className="rounded-full text-white text-xs px-2 py-0.5"
+                              style={{ backgroundColor: tag.color || '#64748b' }}
+                            >
+                              {tag.name}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
                 
@@ -807,6 +904,14 @@ const Defects = () => {
                   />
                 </div>
               </div>
+
+              {/* Tags */}
+              <TagMultiSelect
+                availableTags={availableTags}
+                value={editDefectForm.tags}
+                onChange={(ids) => setEditDefectForm(prev => ({ ...prev, tags: ids }))}
+                onAddTag={addOrUpdateTag}
+              />
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>

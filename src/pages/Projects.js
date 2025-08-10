@@ -28,7 +28,7 @@ const Projects = () => {
   const [selectedProject, setSelectedProject] = useState(null);
   const [availableOrgs, setAvailableOrgs] = useState([]);
   const [message, setMessage] = useState({ type: '', text: '' });
-  const [showOnlyActive, setShowOnlyActive] = useState(false);
+  const [showOnlyActive, setShowOnlyActive] = useState(true);
   const [formData, setFormData] = useState({
     organizationId: '',
     name: '',

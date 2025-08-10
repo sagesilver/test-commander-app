@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import DataTable from './table/DataTable';
+import TagPills from './TagPills';
 import { 
   AlertTriangle,
   ArrowUp,
@@ -13,32 +14,41 @@ import {
   Trash2
 } from 'lucide-react';
 
-const DefectsGrid = ({ defects, onViewDefect, onEditDefect, onDeleteDefect }) => {
+const DefectsGrid = ({ defects, onViewDefect, onEditDefect, onDeleteDefect, resolveTags, onFilterByTag }) => {
   
   // Transform defects data for the grid
   const gridData = useMemo(() => {
-    return defects.map((defect) => ({
-      id: defect.id,
-      title: defect.title,
-      description: defect.description,
-      status: defect.status,
-      severity: defect.severity,
-      priority: defect.priority,
-      reporter: defect.reporter,
-      assignedTo: defect.assignedTo,
-      project: defect.project,
-      module: defect.module,
-      createdDate: defect.createdDate,
-      updatedDate: defect.updatedDate,
-      attachments: defect.attachments,
-      comments: defect.comments,
-      environment: defect.environment,
-      browser: defect.browser,
-      os: defect.os,
-      // Store original data for actions
-      originalData: defect
-    }));
-  }, [defects]);
+    return defects.map((defect) => {
+      const tagsResolved = typeof resolveTags === 'function' ? resolveTags(defect.tags) : [];
+      const tagsText = Array.isArray(tagsResolved) && tagsResolved.length > 0
+        ? tagsResolved.map(t => t.name).join(', ')
+        : '';
+      return ({
+        id: defect.id,
+        title: defect.title,
+        description: defect.description,
+        status: defect.status,
+        severity: defect.severity,
+        priority: defect.priority,
+        reporter: defect.reporter,
+        assignedTo: defect.assignedTo,
+        project: defect.project,
+        module: defect.module,
+        createdDate: defect.createdDate,
+        updatedDate: defect.updatedDate,
+        attachments: defect.attachments,
+        comments: defect.comments,
+        environment: defect.environment,
+        browser: defect.browser,
+        os: defect.os,
+        tags: Array.isArray(defect.tags) ? defect.tags : [],
+        tagsResolved,
+        tagsText,
+        // Store original data for actions
+        originalData: defect
+      });
+    });
+  }, [defects, resolveTags]);
 
   // Column definitions matching TestCasesGrid look & feel
   const columns = [
@@ -184,6 +194,19 @@ const DefectsGrid = ({ defects, onViewDefect, onEditDefect, onDeleteDefect }) =>
     { id: 'project', header: 'Project', accessorKey: 'project', size: 160, cell: ({ getValue }) => (<span className="text-sm text-foreground">{getValue()}</span>), filterType: 'text' },
     {
       id: 'module', header: 'Module', accessorKey: 'module', size: 140, cell: ({ getValue }) => (<span className="text-sm text-foreground">{getValue()}</span>), filterType: 'text'
+    },
+    {
+      id: 'tags',
+      header: 'Tags',
+      accessorKey: 'tagsText',
+      size: 240,
+      cell: ({ row }) => (
+        <TagPills
+          tags={row.original.tagsResolved}
+          onTagClick={(tag) => onFilterByTag?.(tag.id)}
+        />
+      ),
+      filterType: 'text',
     },
     {
       id: 'updatedDate',

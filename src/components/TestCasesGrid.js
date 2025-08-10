@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import DataTable from './table/DataTable';
+import TagPills from './TagPills';
 import { 
   Search, 
   Edit,
@@ -21,7 +22,9 @@ const TestCasesGrid = ({
   onDeleteTestCase, 
   onDuplicateTestCase,
   onBulkEdit,
-  onBulkDelete 
+  onBulkDelete,
+  resolveTags,
+  onFilterByTag,
 }) => {
   // Prepare data for MUI DataGrid with unique IDs
   const gridData = useMemo(() => {
@@ -29,7 +32,12 @@ const TestCasesGrid = ({
       return [];
     }
     
-    return testCases.map((testCase, index) => ({
+    return testCases.map((testCase, index) => {
+      const tagsResolved = typeof resolveTags === 'function' ? resolveTags(testCase.tags) : [];
+      const tagsText = Array.isArray(tagsResolved) && tagsResolved.length > 0
+        ? tagsResolved.map(t => t.name).join(', ')
+        : '';
+      return ({
       id: index, // MUI DataGrid requires unique id field
       tcid: testCase.tcid || '',
       name: testCase.name || '',
@@ -38,10 +46,14 @@ const TestCasesGrid = ({
       priority: testCase.priority || 'Medium',
       overallResult: testCase.overallResult || 'Not Run',
       stepsCount: Array.isArray(testCase.testSteps) ? testCase.testSteps.length : 0,
+        tags: Array.isArray(testCase.tags) ? testCase.tags : [],
+        tagsResolved,
+        tagsText,
       // Store original data for actions
-      originalData: testCase
-    }));
-  }, [testCases]);
+        originalData: testCase
+      });
+    });
+  }, [testCases, resolveTags]);
 
   // Column definitions for headless DataTable (TanStack)
   const columns = [
@@ -192,6 +204,20 @@ const TestCasesGrid = ({
         </div>
       ),
       enableSorting: true,
+      filterType: 'text',
+    },
+    {
+      id: 'tags',
+      header: 'Tags',
+      accessorKey: 'tagsText',
+      size: 240,
+      cell: ({ row }) => (
+        <TagPills
+          tags={row.original.tagsResolved}
+          onTagClick={(tag) => onFilterByTag?.(tag.id)}
+        />
+      ),
+      enableSorting: false,
       filterType: 'text',
     },
     {

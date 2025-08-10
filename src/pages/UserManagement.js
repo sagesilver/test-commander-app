@@ -23,7 +23,7 @@ const UserManagement = () => {
   const [users, setUsers] = useState([]);
   const [organizations, setOrganizations] = useState([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showOnlyActive, setShowOnlyActive] = useState(false);
+  const [showOnlyActive, setShowOnlyActive] = useState(true);
   const [message, setMessage] = useState({ type: '', text: '' });
 
   // Load data function

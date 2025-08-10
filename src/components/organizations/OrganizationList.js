@@ -16,7 +16,7 @@ const OrganizationList = () => {
   const [viewOpen, setViewOpen] = useState(false);
   const [selectedOrganization, setSelectedOrganization] = useState(null);
   const [viewMode, setViewMode] = useState('table'); // 'table' | 'grid'
-  const [showOnlyActive, setShowOnlyActive] = useState(false);
+  const [showOnlyActive, setShowOnlyActive] = useState(true);
 
   useEffect(() => {
     loadOrganizations();
