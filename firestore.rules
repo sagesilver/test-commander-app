@@ -2,6 +2,12 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     // Helper functions
+    function hasUserRole(roles, role) {
+      return roles != null && (
+        (roles is list && roles.hasAny([role])) ||
+        (roles is map && ((role in roles) || (roles[role] == true)))
+      );
+    }
     function isAuthenticated() {
       return request.auth != null;
     }
@@ -14,14 +20,14 @@ service cloud.firestore {
     
     function isAppAdmin() {
       let userData = getUserData();
-      return userData != null && userData.roles != null && ('APP_ADMIN' in userData.roles);
+      return userData != null && hasUserRole(userData.roles, 'APP_ADMIN');
     }
     
     function isOrgAdmin(organizationId) {
       let userData = getUserData();
       return userData != null && 
              userData.organisationId == organizationId && 
-             userData.roles != null && ('ORG_ADMIN' in userData.roles);
+             hasUserRole(userData.roles, 'ORG_ADMIN');
     }
     
     function isOrgMember(organizationId) {
@@ -48,6 +54,29 @@ service cloud.firestore {
       allow read: if isAppAdmin() || isOrgMember(organizationId);
       allow create: if isAppAdmin();
       allow update, delete: if isAppAdmin() || isOrgAdmin(organizationId);
+
+      // Projects subcollection
+      match /projects/{projectId} {
+        function isProjectAdmin() {
+          return request.auth != null &&
+                 resource.data.projectAdminIds != null && (
+                   (resource.data.projectAdminIds is list && resource.data.projectAdminIds.hasAny([request.auth.uid])) ||
+                   (resource.data.projectAdminIds is map && (request.auth.uid in resource.data.projectAdminIds))
+                 );
+        }
+
+        // Read policy: org members can read; non-admins should only see ACTIVE via queries
+        // We do not enforce ACTIVE filter here to allow admins to read INACTIVE when needed.
+        allow read: if (
+          isOrgMember(organizationId) || isAppAdmin() || isOrgAdmin(organizationId) || isProjectAdmin()
+        );
+
+        // Create restricted to App/Org Admin
+        allow create: if isAppAdmin() || isOrgAdmin(organizationId);
+
+        // Update/Delete allowed to App/Org Admin or Project Admins
+        allow update, delete: if isAppAdmin() || isOrgAdmin(organizationId) || isProjectAdmin();
+      }
     }
   }
 }

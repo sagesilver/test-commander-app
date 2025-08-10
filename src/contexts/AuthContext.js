@@ -4,6 +4,7 @@ import { auth } from '../services/firebase';
 import { getUserData, isAppAdmin, getOrganizationData } from '../services/authService';
 import { getUserById, getAllUsers, getUsersByOrganization } from '../services/userService';
 import { organizationService } from '../services/organizationService';
+import { projectsService } from '../services/projectsService';
 import { USER_ROLES } from '../services/authService';
 
 const AuthContext = createContext();
@@ -225,52 +226,50 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const getProjects = (organizationId = null) => {
-    if (currentUserData?.role === USER_ROLES.APP_ADMIN) {
-      return organizationId 
-        ? projects.filter(p => p.organisationId === organizationId)
-        : projects;
-    } else if (currentUserData?.roles?.includes(USER_ROLES.ORG_ADMIN)) {
-      return projects.filter(p => p.organisationId === currentUserData.organisationId);
+  const getProjects = async (organizationId = null, { includeInactive = false } = {}) => {
+    try {
+      return await projectsService.getProjectsForUser(currentUserData, { organizationId, includeInactive });
+    } catch (error) {
+      console.error('Error loading projects:', error);
+      return [];
     }
-    return [];
   };
 
-  const createProject = (projectData) => {
-    const newProject = {
-      projectId: `proj${Date.now()}`,
-      ...projectData,
-      createdBy: currentUser.userId,
-      createdAt: new Date().toISOString(),
-      isActive: true,
-      members: [
-        { userId: currentUser.userId, roles: ['PROJECT_MANAGER'], addedAt: new Date().toISOString() }
-      ],
-      settings: {
-        customFields: [],
-        workflows: [],
-        testModel: {}
-      }
-    };
-
-    const updatedProjects = [...projects, newProject];
-    setProjects(updatedProjects);
-    localStorage.setItem('testCommander_projects', JSON.stringify(updatedProjects));
-    return newProject;
+  const getAllProjects = async ({ includeInactive = false } = {}) => {
+    try {
+      return await projectsService.getAllProjectsForAdmin(currentUserData, { includeInactive });
+    } catch (error) {
+      console.error('Error loading all projects:', error);
+      return [];
+    }
   };
 
-  const updateProject = (projectId, updatedData) => {
-    const updatedProjects = projects.map(project =>
-      project.projectId === projectId ? { ...project, ...updatedData } : project
-    );
-    setProjects(updatedProjects);
-    localStorage.setItem('testCommander_projects', JSON.stringify(updatedProjects));
+  const createProject = async (organizationId, projectData) => {
+    try {
+      return await projectsService.createProject(currentUserData, organizationId, projectData);
+    } catch (error) {
+      console.error('Error creating project:', error);
+      throw error;
+    }
   };
 
-  const deleteProject = (projectId) => {
-    const updatedProjects = projects.filter(project => project.projectId !== projectId);
-    setProjects(updatedProjects);
-    localStorage.setItem('testCommander_projects', JSON.stringify(updatedProjects));
+  const updateProject = async (organizationId, projectId, updatedData) => {
+    try {
+      await projectsService.updateProject(currentUserData, organizationId, projectId, updatedData);
+    } catch (error) {
+      console.error('Error updating project:', error);
+      throw error;
+    }
+  };
+
+  const deleteProject = async (organizationId, projectId) => {
+    try {
+      // Soft delete: set INACTIVE
+      await projectsService.deactivateProject(currentUserData, organizationId, projectId);
+    } catch (error) {
+      console.error('Error deactivating project:', error);
+      throw error;
+    }
   };
 
   const createUser = async (userData) => {
@@ -323,6 +322,7 @@ export const AuthProvider = ({ children }) => {
     updateOrganization,
     deleteOrganization,
     getProjects,
+    getAllProjects,
     createProject,
     updateProject,
     deleteProject,

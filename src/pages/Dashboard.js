@@ -24,11 +24,12 @@ import OrganizationPanel from '../components/OrganizationPanel';
 const DashboardCharts = lazy(() => import('../components/DashboardCharts'));
 
 const Dashboard = () => {
-  const { currentUser, currentUserData, currentOrganization, getUsers } = useAuth();
+  const { currentUser, currentUserData, currentOrganization, getUsers, getProjects } = useAuth();
   const [organizations, setOrganizations] = useState([]);
   const [organizationStats, setOrganizationStats] = useState({});
   const [loading, setLoading] = useState(true);
   const [orgUsersCount, setOrgUsersCount] = useState(0);
+  const [orgActiveProjectsCount, setOrgActiveProjectsCount] = useState(0);
   const navigate = useNavigate();
 
   // Load organizations from database for App Admin
@@ -86,6 +87,28 @@ const Dashboard = () => {
     fetchOrgUsers();
   }, [currentUserData, currentOrganization, getUsers]);
 
+  // Load active projects count for Org Admins
+  useEffect(() => {
+    const fetchOrgProjects = async () => {
+      try {
+        if (currentUserData?.roles?.includes('ORG_ADMIN') && currentOrganization?.organisationId) {
+          // Get all projects for the org and count only active ones
+          const projects = await getProjects(currentOrganization.organisationId, { includeInactive: true });
+          const active = Array.isArray(projects)
+            ? projects.filter((p) => p?.isActive !== false && String(p?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE')
+            : [];
+          setOrgActiveProjectsCount(active.length);
+        } else {
+          setOrgActiveProjectsCount(0);
+        }
+      } catch (e) {
+        console.error('Error loading organization projects:', e);
+        setOrgActiveProjectsCount(0);
+      }
+    };
+    fetchOrgProjects();
+  }, [currentUserData, currentOrganization, getProjects]);
+
   // Mock data for charts
   const testProgressData = [
     { name: 'System', completed: 85, total: 100 },
@@ -123,7 +146,7 @@ const Dashboard = () => {
     } else if (currentUserData?.roles?.includes('ORG_ADMIN')) {
       return [
         { title: 'Total Users', value: String(orgUsersCount || 0), icon: Users, color: 'text-blue-600' },
-        { title: 'Active Projects', value: '5', icon: FileText, color: 'text-green-600' },
+        { title: 'Active Projects', value: String(orgActiveProjectsCount || 0), icon: FileText, color: 'text-green-600' },
         { title: 'Active Defects', value: '23', icon: AlertTriangle, color: 'text-red-500' },
         { title: 'Test Coverage', value: '87%', icon: CheckCircle, color: 'text-green-500' },
       ];

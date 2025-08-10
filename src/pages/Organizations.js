@@ -31,6 +31,10 @@ const Organizations = () => {
 
   return (
     <div className="p-6">
+      <div className="mb-6">
+        <h1 className="text-3xl font-semibold text-foreground">Organizations</h1>
+        <p className="text-menu">Manage organizations across the system</p>
+      </div>
       <OrganizationList />
     </div>
   );

@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import UserForm from '../components/UserForm';
+import DataTable from '../components/table/DataTable';
 import { 
   Plus, 
   Edit, 
@@ -18,7 +19,7 @@ import {
 } from 'lucide-react';
 
 const UserManagement = () => {
-  const { currentUserData, getUsers, getOrganizations, createUser, updateUser, deleteUserById } = useAuth();
+  const { currentUserData, getUsers, getOrganizations, createUser, updateUserById, deleteUserById } = useAuth();
   const [users, setUsers] = useState([]);
   const [organizations, setOrganizations] = useState([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -59,6 +60,24 @@ const UserManagement = () => {
     setMessage({ type, text });
   };
 
+  // Build lookups for table cells (declare before any early returns)
+  const orgIdToName = useMemo(() => {
+    const map = new Map();
+    for (const org of organizations) {
+      const key = org.organisationId || org.id;
+      if (key) map.set(key, org.name || key);
+    }
+    return map;
+  }, [organizations]);
+
+  const tableData = useMemo(() => {
+    return (users || []).map((u) => ({
+      ...u,
+      roleLabels: Array.isArray(u.roles) ? u.roles.join(', ') : '',
+      organizationName: orgIdToName.get(u.organisationId) || '—',
+    }));
+  }, [users, orgIdToName]);
+
   const handleDeleteUser = async (userId) => {
     const userToDelete = users.find(user => user.userId === userId);
     if (window.confirm(`Are you sure you want to delete "${userToDelete?.name}"? This action cannot be undone.`)) {
@@ -77,10 +96,6 @@ const UserManagement = () => {
       }
     }
   };
-
-
-
-
 
   const formatDate = (value) => {
     if (!value) return '—';
@@ -121,6 +136,8 @@ const UserManagement = () => {
     );
   }
 
+  // (memos declared above)
+
   // Check if user has permission to access user management
   const allowedRoles = ['APP_ADMIN', 'ORG_ADMIN'];
   if (!currentUserData?.roles?.some(role => allowedRoles.includes(role))) {
@@ -141,13 +158,13 @@ const UserManagement = () => {
       {message.type && (
         <div className={`mb-6 p-4 rounded-lg flex items-center gap-3 ${
           message.type === 'success' 
-            ? 'bg-green-50 border border-green-200 text-green-800' 
-            : 'bg-red-50 border border-red-200 text-red-800'
+            ? 'bg-green-900/20 border border-green-800 text-green-300' 
+            : 'bg-red-900/20 border border-red-800 text-red-300'
         }`}>
           {message.type === 'success' ? (
-            <CheckCircle className="w-5 h-5 text-green-600" />
+            <CheckCircle className="w-5 h-5 text-green-400" />
           ) : (
-            <AlertCircle className="w-5 h-5 text-red-600" />
+            <AlertCircle className="w-5 h-5 text-red-400" />
           )}
           <span className="font-medium">{message.text}</span>
         </div>
@@ -155,95 +172,77 @@ const UserManagement = () => {
 
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-3xl font-semibold text-foreground">
             {currentUserData?.roles?.includes('APP_ADMIN') ? 'Global User Management' : 'User Management'}
           </h1>
-          <p className="text-gray-600">
+          <p className="text-menu">
             {currentUserData?.roles?.includes('APP_ADMIN') 
               ? 'Manage all users across all organizations' 
-              : 'Manage users within your organization'
-            }
+              : 'Manage users within your organization'}
           </p>
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+          className="btn-primary flex items-center space-x-2"
         >
-          <Plus size={20} />
-          Add User
+          <Plus className="w-4 h-4" />
+          <span>Add User</span>
         </button>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {(users || []).map((user) => {
-          const userOrg = organizations.find(org => org.organisationId === user.organisationId);
-          return (
-            <div key={user.userId} className="bg-white rounded-lg border border-gray-200 p-6">
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <User className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900">{user.name}</h3>
-                    <p className="text-sm text-gray-500">{user.email}</p>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  {user.userId !== currentUserData?.userId && (
+      <div className="bg-card rounded-lg shadow-lg border border-subtle">
+        <div className="flex items-center justify-between p-4 bg-surface-muted border-b border-subtle">
+          <div className="flex items-center space-x-4">
+            <h3 className="text-lg font-semibold text-foreground">Users</h3>
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-[rgb(var(--tc-icon))]/20 text-[rgb(var(--tc-contrast))]">
+              {users.length} total
+            </span>
+          </div>
+        </div>
+        <div className="w-full">
+          <DataTable
+            data={tableData}
+            defaultPageSize={10}
+            pageSizeOptions={[10, 25, 50]}
+            emptyMessage={users.length ? 'No users' : 'No users'}
+            columns={[
+              { id: 'name', header: 'Name', accessorKey: 'name', size: 220, filterType: 'text', cell: ({ getValue }) => (
+                <span className="text-foreground font-medium truncate" title={getValue()}>{getValue()}</span>
+              )},
+              { id: 'email', header: 'Email', accessorKey: 'email', size: 260, filterType: 'text', cell: ({ getValue }) => (
+                <span className="text-menu truncate" title={getValue()}>{getValue()}</span>
+              )},
+              { id: 'roles', header: 'Roles', accessorKey: 'roleLabels', size: 220, filterType: 'text', cell: ({ getValue }) => (
+                <span className="text-menu truncate" title={getValue()}>{getValue()}</span>
+              )},
+              { id: 'organization', header: 'Organization', accessorKey: 'organizationName', size: 220, filterType: 'text', cell: ({ getValue }) => (
+                <span className="text-menu truncate" title={getValue()}>{getValue()}</span>
+              )},
+              { id: 'status', header: 'Status', accessorKey: 'isActive', size: 120, filterType: 'select', cell: ({ getValue }) => (
+                <span className={`inline-flex items-center h-7 px-2 rounded-full text-sm font-medium ${getValue() !== false ? 'bg-green-900/20 text-green-400' : 'bg-red-900/20 text-red-400'}`}>
+                  {getValue() !== false ? 'Active' : 'Inactive'}
+                </span>
+              )},
+              { id: 'createdAt', header: 'Created', accessorKey: 'createdAt', size: 160, filterType: 'text', cell: ({ getValue }) => (
+                <span className="text-menu">{formatDate(getValue())}</span>
+              )},
+              { id: 'actions', header: 'Actions', size: 140, enableSorting: false, enableColumnFilter: false, cell: ({ row }) => (
+                <div className="h-full flex items-center space-x-1">
+                  {row.original.userId !== currentUserData?.userId && (
                     <button
-                      onClick={() => handleDeleteUser(user.userId)}
-                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                      className="p-1.5 text-menu hover:text-red-300 hover:bg-red-900/20 rounded transition-all duration-200"
+                      title="Delete User"
+                      onClick={() => handleDeleteUser(row.original.userId)}
                     >
-                      <Trash2 size={16} />
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   )}
                 </div>
-              </div>
-
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Shield size={16} />
-                  <span className="capitalize">{user.roles.map(role => role.replace('_', ' ').toLowerCase()).join(', ')}</span>
-                </div>
-                
-                {user.organisationId && (
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Building size={16} />
-                    <span>{userOrg?.name || 'Unknown Organization'}</span>
-                  </div>
-                )}
-
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Calendar size={16} />
-                  <span>Created: {formatDate(user.createdAt)}</span>
-                </div>
-
-                {user.profile.department && (
-                  <div className="text-sm text-gray-600">
-                    <p><strong>Department:</strong> {user.profile.department}</p>
-                    <p><strong>Position:</strong> {user.profile.position}</p>
-                  </div>
-                )}
-
-                <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    user.isActive 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-red-100 text-red-800'
-                  }`}>
-                    {user.isActive ? 'Active' : 'Inactive'}
-                  </span>
-                  {user.userId === currentUserData?.userId && (
-                    <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
-                      Current User
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        })}
+              )},
+            ]}
+            className="text-foreground"
+          />
+        </div>
       </div>
 
       {/* User Form Modal */}

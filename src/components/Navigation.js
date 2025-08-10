@@ -323,7 +323,8 @@ const Navigation = () => {
       </nav>
 
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-card shadow-lg transform transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      {isSidebarOpen && (
+      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-card shadow-lg`}>
         <div className="flex flex-col h-full">
           {/* Sidebar Header */}
           <div className="flex items-center justify-between p-4 border-b border-subtle">
@@ -435,6 +436,7 @@ const Navigation = () => {
           </div>
         </div>
       </div>
+      )}
 
       {/* Sidebar Overlay */}
       {isSidebarOpen && (

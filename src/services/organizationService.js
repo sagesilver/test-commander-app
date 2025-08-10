@@ -131,57 +131,48 @@ export const organizationService = {
   
   // Get organization statistics
   async getOrganizationStats(orgId) {
-    let usersCount = 0;
-    let projectsCount = 0;
-
-    // Try with active filter first; if index/permission issues occur, fall back safely
+    // Users: count total and active from top-level users collection
+    let totalUsers = 0;
+    let activeUsers = 0;
     try {
-      try {
-        const usersQueryActive = query(
-          collection(db, 'users'),
-          where('organisationId', '==', orgId),
-          where('isActive', '==', true)
-        );
-        const usersSnapshotActive = await getDocs(usersQueryActive);
-        usersCount = usersSnapshotActive.size;
-      } catch (inner) {
-        const usersQuery = query(
-          collection(db, 'users'),
-          where('organisationId', '==', orgId)
-        );
-        const usersSnapshot = await getDocs(usersQuery);
-        usersCount = usersSnapshot.size;
-      }
+      const usersQueryAll = query(
+        collection(db, 'users'),
+        where('organisationId', '==', orgId)
+      );
+      const usersSnap = await getDocs(usersQueryAll);
+      totalUsers = usersSnap.size;
+      usersSnap.forEach((docSnap) => {
+        const data = docSnap.data() || {};
+        if (data.isActive !== false) activeUsers += 1;
+      });
     } catch (_ignored) {
-      usersCount = 0; // permission denied or other error
+      totalUsers = 0;
+      activeUsers = 0;
     }
 
+    // Projects: nested under organizations/{orgId}/projects
+    let totalProjects = 0;
+    let activeProjects = 0;
     try {
-      try {
-        const projectsQueryActive = query(
-          collection(db, 'projects'),
-          where('organisationId', '==', orgId),
-          where('isActive', '==', true)
-        );
-        const projectsSnapshotActive = await getDocs(projectsQueryActive);
-        projectsCount = projectsSnapshotActive.size;
-      } catch (inner) {
-        const projectsQuery = query(
-          collection(db, 'projects'),
-          where('organisationId', '==', orgId)
-        );
-        const projectsSnapshot = await getDocs(projectsQuery);
-        projectsCount = projectsSnapshot.size;
-      }
+      const projCol = collection(db, 'organizations', orgId, 'projects');
+      const projSnap = await getDocs(projCol);
+      totalProjects = projSnap.size;
+      projSnap.forEach((docSnap) => {
+        const p = docSnap.data() || {};
+        const status = String(p.status || 'ACTIVE').toUpperCase();
+        const isActive = p.isActive !== false && status !== 'INACTIVE';
+        if (isActive) activeProjects += 1;
+      });
     } catch (_ignored) {
-      projectsCount = 0; // permission denied or other error; safe default
+      totalProjects = 0;
+      activeProjects = 0;
     }
 
     return {
-      totalUsers: usersCount,
-      totalProjects: projectsCount,
-      activeUsers: usersCount,
-      activeProjects: projectsCount,
+      totalUsers,
+      totalProjects,
+      activeUsers,
+      activeProjects,
     };
   },
 

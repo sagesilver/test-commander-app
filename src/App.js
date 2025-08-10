@@ -10,6 +10,7 @@ import Reports from './pages/Reports';
 import Organizations from './pages/Organizations';
 import Projects from './pages/Projects';
 import UserManagement from './pages/UserManagement';
+import OrganizationSettings from './pages/OrganizationSettings';
 import SuperUserDashboard from './components/SuperUserDashboard';
 import Login from './pages/Login';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -71,6 +72,11 @@ function AppRoutes() {
             <Route path="/projects" element={
               <ProtectedRoute>
                 <Projects />
+              </ProtectedRoute>
+            } />
+            <Route path="/organization-settings" element={
+              <ProtectedRoute>
+                <OrganizationSettings />
               </ProtectedRoute>
             } />
             <Route path="/user-management" element={

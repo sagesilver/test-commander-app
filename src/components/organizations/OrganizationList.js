@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { organizationService } from '../../services/organizationService';
 import DataTable from '../table/DataTable';
 // Replaced MUI Snackbar/Alert and Icons with simple equivalents
-import { Edit, Trash2, Eye, Plus, Building, Mail as Email, XCircle, CheckCircle, Settings, CreditCard, Palette } from 'lucide-react';
+import { Edit, Trash2, Eye, Plus, Building, Mail as Email, XCircle, CheckCircle, Settings, CreditCard, Palette, Grid, List } from 'lucide-react';
 import OrganizationForm from './OrganizationForm';
 
 const OrganizationList = () => {
@@ -15,6 +15,7 @@ const OrganizationList = () => {
   const [formOpen, setFormOpen] = useState(false);
   const [viewOpen, setViewOpen] = useState(false);
   const [selectedOrganization, setSelectedOrganization] = useState(null);
+  const [viewMode, setViewMode] = useState('table'); // 'table' | 'grid'
 
   useEffect(() => {
     loadOrganizations();
@@ -308,27 +309,115 @@ const OrganizationList = () => {
               {organizations.length} total
             </span>
           </div>
-          {currentUserData?.roles.includes('APP_ADMIN') && (
-            <button
-              onClick={handleCreate}
-              className="btn-primary flex items-center space-x-2"
-              title="Create Organization"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Create Organization</span>
-            </button>
-          )}
+          <div className="flex items-center space-x-3">
+            <div className="flex rounded-lg border border-subtle overflow-hidden" role="tablist" aria-label="View mode">
+              <button
+                onClick={() => setViewMode('table')}
+                title="Table View"
+                className={`p-2 text-sm ${viewMode === 'table' ? 'bg-white/10 text-white' : 'text-menu hover:text-white hover:bg-white/10'}`}
+                aria-pressed={viewMode === 'table'}
+              >
+                <List className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('grid')}
+                title="Grid View"
+                className={`p-2 text-sm border-l border-subtle ${viewMode === 'grid' ? 'bg-white/10 text-white' : 'text-menu hover:text-white hover:bg-white/10'}`}
+                aria-pressed={viewMode === 'grid'}
+              >
+                <Grid className="w-4 h-4" />
+              </button>
+            </div>
+            {currentUserData?.roles.includes('APP_ADMIN') && (
+              <button
+                onClick={handleCreate}
+                className="btn-primary flex items-center space-x-2"
+                title="Create Organization"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Create Organization</span>
+              </button>
+            )}
+          </div>
         </div>
-        <div className="w-full">
-          <DataTable
-            data={organizations}
-            columns={columns}
-            defaultPageSize={10}
-            pageSizeOptions={[10, 25, 50]}
-            emptyMessage={loading ? 'Loading…' : 'No organizations'}
-            className="text-foreground"
-          />
-        </div>
+        {viewMode === 'table' ? (
+          <div className="w-full">
+            <DataTable
+              data={organizations}
+              columns={columns}
+              defaultPageSize={10}
+              pageSizeOptions={[10, 25, 50]}
+              emptyMessage={loading ? 'Loading…' : 'No organizations'}
+              className="text-foreground"
+            />
+          </div>
+        ) : (
+          <div className="p-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {organizations.map((org) => {
+                const s = stats[org.organisationId] || {};
+                return (
+                  <div key={org.organisationId} className="bg-card border border-subtle rounded-lg p-4">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h4 className="text-foreground font-semibold">{org.name}</h4>
+                        <p className="text-sm text-menu line-clamp-2">{org.description || '—'}</p>
+                      </div>
+                      <span className={`h-7 px-2 rounded-full text-xs font-medium ${org.isActive !== false ? 'bg-green-900/20 text-green-400' : 'bg-red-900/20 text-red-400'}`}>{org.isActive !== false ? 'Active' : 'Inactive'}</span>
+                    </div>
+                    <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
+                      <div>
+                        <div className="text-menu">Users</div>
+                        <div className="text-foreground font-medium">{s.activeUsers || 0}/{s.totalUsers || 0}</div>
+                      </div>
+                      <div>
+                        <div className="text-menu">Projects</div>
+                        <div className="text-foreground font-medium">{s.activeProjects || 0}/{s.totalProjects || 0}</div>
+                      </div>
+                      <div>
+                        <div className="text-menu">Plan</div>
+                        <div className="text-foreground font-medium capitalize">{(org.subscription?.plan || 'free')}</div>
+                      </div>
+                    </div>
+                    <div className="mt-4 flex items-center space-x-2">
+                      <button
+                        className="p-1.5 text-menu hover:text-white hover:bg-white/10 rounded"
+                        title="View Details"
+                        onClick={() => handleView(org)}
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      <button
+                        className="p-1.5 text-menu hover:text-white hover:bg-white/10 rounded"
+                        title="Edit Organization"
+                        onClick={() => handleEdit(org)}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      {org.isActive !== false ? (
+                        <button
+                          className="p-1.5 text-menu hover:text-red-300 hover:bg-red-900/20 rounded"
+                          title="Deactivate Organization"
+                          onClick={() => handleDelete(org)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      ) : (
+                        <button
+                          className="p-1.5 text-menu hover:text-white hover:bg-white/10 rounded"
+                          title="Reactivate Organization"
+                          onClick={() => handleRestore(org)}
+                        >
+                          <Plus className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* View Organization Modal */}

@@ -165,36 +165,7 @@ const SuperUserDashboard = () => {
         </button>
       </div>
 
-      {/* Organizations Section */}
-      <div className="bg-card rounded-xl shadow-lg p-6 border border-subtle">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-2">
-            <Building className="h-6 w-6 text-[rgb(var(--tc-icon))]" />
-            <h2 className="text-xl font-semibold text-foreground">Organizations</h2>
-            <span className="text-sm text-muted">({organizations.length} total)</span>
-          </div>
-        </div>
-
-        {/* Organization Panels Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {organizations.length === 0 ? (
-            <div className="col-span-full text-center py-8 text-muted">
-              <Building className="h-12 w-12 mx-auto mb-4 text-menu" />
-              <p>No organizations found</p>
-              <p className="text-sm">Create your first organization to get started</p>
-            </div>
-          ) : (
-            organizations.map((org) => (
-              <OrganizationPanel
-                key={org.organisationId}
-                organization={org}
-                stats={organizationStats[org.organisationId]}
-                onClick={handleOrganizationClick}
-              />
-            ))
-          )}
-        </div>
-      </div>
+      {/* Organizations panel grid moved to Organizations page */}
 
       {/* Organization View Modal */}
       <OrganizationForm
