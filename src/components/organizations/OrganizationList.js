@@ -16,16 +16,20 @@ const OrganizationList = () => {
   const [viewOpen, setViewOpen] = useState(false);
   const [selectedOrganization, setSelectedOrganization] = useState(null);
   const [viewMode, setViewMode] = useState('table'); // 'table' | 'grid'
+  const [showOnlyActive, setShowOnlyActive] = useState(false);
 
   useEffect(() => {
     loadOrganizations();
-  }, []);
+  }, [showOnlyActive]);
 
   const loadOrganizations = async () => {
     try {
       setLoading(true);
       // Load organizations directly from Firestore database
-      const orgs = await organizationService.getAllOrganizations();
+      let orgs = await organizationService.getAllOrganizations();
+      if (showOnlyActive) {
+        orgs = orgs.filter((o) => o.isActive !== false);
+      }
       setOrganizations(orgs);
       
       if (orgs.length === 0) {
@@ -328,6 +332,18 @@ const OrganizationList = () => {
                 <Grid className="w-4 h-4" />
               </button>
             </div>
+            <label className="flex items-center ml-3 select-none" title="Show only Active organizations">
+              <input
+                type="checkbox"
+                className="sr-only"
+                checked={showOnlyActive}
+                onChange={(e) => setShowOnlyActive(e.target.checked)}
+              />
+              <span className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${showOnlyActive ? 'bg-green-600' : 'bg-white/10 border border-subtle'}`}>
+                <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${showOnlyActive ? 'translate-x-6' : 'translate-x-1'}`}></span>
+              </span>
+              <span className="ml-2 text-sm text-menu">Active only</span>
+            </label>
             {currentUserData?.roles.includes('APP_ADMIN') && (
               <button
                 onClick={handleCreate}

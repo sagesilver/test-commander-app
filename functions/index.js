@@ -39,6 +39,13 @@ function getPermissionsForRoles(roles) {
       'manage_defects',
       'view_reports'
     );
+  } else if (roles.includes('PROJECT_MANAGER')) {
+    permissions.push(
+      'manage_projects',
+      'manage_test_cases',
+      'manage_defects',
+      'view_reports'
+    );
   } else if (roles.includes('ANALYST')) {
     permissions.push(
       'manage_test_cases',
@@ -64,6 +71,7 @@ function getPermissionsForRoles(roles) {
 const ALLOWED_ROLES = new Set([
   'APP_ADMIN',
   'ORG_ADMIN',
+  'PROJECT_MANAGER',
   'ANALYST',
   'TEST_ENGINEER',
   'DEFECT_COORDINATOR',

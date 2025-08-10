@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Plus, 
@@ -26,6 +26,7 @@ import {
   Info
  } from 'lucide-react';
 import TestCasesGrid from '../components/TestCasesGrid';
+import { useAuth } from '../contexts/AuthContext';
 
 const TestCases = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -598,6 +599,26 @@ const TestCases = () => {
     }
   ]);
 
+  // Projects selector (future filtering)
+  const { getProjects } = useAuth();
+  const [projectsList, setProjectsList] = useState([]);
+  const [selectedProjectId, setSelectedProjectId] = useState('all');
+
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        if (typeof getProjects === 'function') {
+          const rows = await getProjects();
+          if (isMounted) setProjectsList(Array.isArray(rows) ? rows : []);
+        }
+      } catch (_) {
+        if (isMounted) setProjectsList([]);
+      }
+    })();
+    return () => { isMounted = false; };
+  }, [getProjects]);
+
   const statusColors = {
     Passed: 'text-green-400 bg-green-900/20',
     Failed: 'text-red-400 bg-red-900/20',
@@ -1104,6 +1125,21 @@ const TestCases = () => {
           <p className="text-menu mt-1">Manage and organize your test cases in a hierarchical structure.</p>
         </div>
         <div className="flex items-center space-x-3">
+          {/* Projects selector (white on black) */}
+          <select
+            aria-label="Filter by Project"
+            className="input-field text-sm h-10 !py-2 pr-8 w-80 lg:w-[28rem]"
+            value={selectedProjectId}
+            onChange={(e) => setSelectedProjectId(e.target.value)}
+            title="Filter by Project"
+          >
+            <option value="all">All Projects</option>
+            {projectsList.map((p) => (
+              <option key={p.id} value={p.id} title={p.name || p.projectName || p.id}>
+                {p.name || p.projectName || p.id}
+              </option>
+            ))}
+          </select>
           <button className="flex items-center space-x-2 px-4 py-2 bg-surface-muted border border-subtle text-white rounded-lg hover:brightness-110 transition-colors whitespace-nowrap">
             <Download className="w-4 h-4" />
             <span>Export</span>

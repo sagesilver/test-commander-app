@@ -3,31 +3,23 @@ import { motion } from 'framer-motion';
 import DefectsGrid from '../components/DefectsGrid';
 import { 
   Plus, 
-  Search, 
-  Filter, 
   AlertTriangle,
   Clock,
-  User,
-  Tag,
   MessageSquare,
   Paperclip,
-  Eye,
-  Edit,
-  Trash2,
   X,
-  ChevronDown,
   Download
 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 const Defects = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('all');
-  const [selectedSeverity, setSelectedSeverity] = useState('all');
-  const [selectedPriority, setSelectedPriority] = useState('all');
   const [showNewDefectModal, setShowNewDefectModal] = useState(false);
   const [showViewDefectModal, setShowViewDefectModal] = useState(false);
   const [showEditDefectModal, setShowEditDefectModal] = useState(false);
   const [selectedDefect, setSelectedDefect] = useState(null);
+  const { getProjects } = useAuth();
+  const [projectsList, setProjectsList] = useState([]);
+  const [selectedProjectId, setSelectedProjectId] = useState('all');
   const [defects, setDefects] = useState([
     {
       id: 'DEF-001',
@@ -152,26 +144,42 @@ const Defects = () => {
     os: ''
   });
 
+  // Load accessible projects for selector (future filtering)
+  React.useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        if (typeof getProjects === 'function') {
+          const rows = await getProjects();
+          if (active) setProjectsList(Array.isArray(rows) ? rows : []);
+        }
+      } catch (_) {
+        if (active) setProjectsList([]);
+      }
+    })();
+    return () => { active = false; };
+  }, [getProjects]);
+
   const statusColors = {
-    'Open': 'text-red-500 bg-red-50',
-    'In Progress': 'text-amber-500 bg-amber-50',
-    'Resolved': 'text-green-500 bg-green-50',
-    'Closed': 'text-slate bg-slate-light',
-    'On Hold': 'text-purple-500 bg-purple-50'
+    Open: 'bg-red-900/20 text-red-400',
+    'In Progress': 'bg-amber-900/20 text-amber-300',
+    Resolved: 'bg-green-900/20 text-green-400',
+    Closed: 'bg-white/5 text-menu',
+    'On Hold': 'bg-purple-900/20 text-purple-300',
   };
 
   const severityColors = {
-    'Critical': 'text-red-600 bg-red-100',
-    'High': 'text-red-500 bg-red-50',
-    'Medium': 'text-amber-500 bg-amber-50',
-    'Low': 'text-green-500 bg-green-50'
+    Critical: 'bg-red-900/20 text-red-400',
+    High: 'bg-red-900/20 text-red-400',
+    Medium: 'bg-orange-900/20 text-orange-300',
+    Low: 'bg-green-900/20 text-green-400',
   };
 
   const priorityColors = {
-    'Critical': 'text-red-600',
-    'High': 'text-red-500',
-    'Medium': 'text-amber-500',
-    'Low': 'text-green-500'
+    Critical: 'bg-red-900/20 text-red-400',
+    High: 'bg-red-900/20 text-red-400',
+    Medium: 'bg-orange-900/20 text-orange-300',
+    Low: 'bg-green-900/20 text-green-400',
   };
 
   // Handler functions
@@ -251,35 +259,42 @@ const Defects = () => {
     setShowEditDefectModal(false);
   };
 
-  const filteredDefects = defects.filter(defect => {
-    const matchesSearch = defect.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         defect.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         defect.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = selectedStatus === 'all' || defect.status === selectedStatus;
-    const matchesSeverity = selectedSeverity === 'all' || defect.severity === selectedSeverity;
-    const matchesPriority = selectedPriority === 'all' || defect.priority === selectedPriority;
-    
-    return matchesSearch && matchesStatus && matchesSeverity && matchesPriority;
-  });
+  // Grid provides quick filter and per-column filters; no page-level filters
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-semibold text-charcoal">Defects</h1>
-          <p className="text-slate mt-1">Track and manage issues and defects across your projects.</p>
+          <h1 className="text-3xl font-semibold text-foreground">Defects</h1>
+          <p className="text-menu mt-1">Track and manage issues and defects across your projects.</p>
         </div>
         <div className="flex items-center space-x-3">
+          {/* Projects selector (white on black) */}
+          <select
+            aria-label="Filter by Project"
+            className="input-field text-sm h-10 !py-2 pr-8 w-80 lg:w-[28rem]"
+            value={selectedProjectId}
+            onChange={(e) => setSelectedProjectId(e.target.value)}
+            title="Filter by Project"
+          >
+            <option value="all">All Projects</option>
+            {projectsList.map((p) => (
+              <option key={p.id} value={p.id} title={p.name || p.projectName || p.id}>
+                {p.name || p.projectName || p.id}
+              </option>
+            ))}
+          </select>
           <button 
-            className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors whitespace-nowrap"
+            className="flex items-center space-x-2 px-4 py-2 bg-surface-muted border border-subtle text-white rounded-lg hover:brightness-110 transition-colors whitespace-nowrap"
             onClick={() => console.log('Export defects')}
+            title="Export"
           >
             <Download className="w-4 h-4" />
             <span>Export</span>
           </button>
           <button 
-            className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+            className="flex items-center space-x-2 px-4 py-2 btn-primary whitespace-nowrap"
             onClick={() => setShowNewDefectModal(true)}
           >
             <Plus className="w-4 h-4" />
@@ -288,71 +303,21 @@ const Defects = () => {
         </div>
       </div>
 
-      {/* Search and Filters */}
-      <div className="card">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate" />
-            <input
-              type="text"
-              placeholder="Search defects by title or ID..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="input-field pl-10"
-            />
-          </div>
-          <div className="flex space-x-3">
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="input-field"
-            >
-              <option value="all">All Status</option>
-              <option value="Open">Open</option>
-              <option value="In Progress">In Progress</option>
-              <option value="Resolved">Resolved</option>
-              <option value="Closed">Closed</option>
-              <option value="On Hold">On Hold</option>
-            </select>
-            <select
-              value={selectedSeverity}
-              onChange={(e) => setSelectedSeverity(e.target.value)}
-              className="input-field"
-            >
-              <option value="all">All Severity</option>
-              <option value="Critical">Critical</option>
-              <option value="High">High</option>
-              <option value="Medium">Medium</option>
-              <option value="Low">Low</option>
-            </select>
-            <select
-              value={selectedPriority}
-              onChange={(e) => setSelectedPriority(e.target.value)}
-              className="input-field"
-            >
-              <option value="all">All Priority</option>
-              <option value="Critical">Critical</option>
-              <option value="High">High</option>
-              <option value="Medium">Medium</option>
-              <option value="Low">Low</option>
-            </select>
-          </div>
-        </div>
-      </div>
+      {/* Filtering is handled inside the grid (quick filter + per-column filters) */}
 
       {/* Defects Grid */}
-      {filteredDefects.length > 0 ? (
+      {defects.length > 0 ? (
         <DefectsGrid 
-          defects={filteredDefects}
+          defects={defects}
           onViewDefect={handleViewDefect}
           onEditDefect={handleEditDefect}
           onDeleteDefect={handleDeleteDefect}
         />
       ) : (
         <div className="card text-center py-12">
-          <AlertTriangle className="w-12 h-12 text-slate mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-charcoal mb-2">No defects found</h3>
-          <p className="text-slate">Try adjusting your search criteria or filters.</p>
+          <AlertTriangle className="w-12 h-12 text-menu mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-foreground mb-2">No defects found</h3>
+          <p className="text-menu">Try adjusting your filters.</p>
         </div>
       )}
 
@@ -362,13 +327,13 @@ const Defects = () => {
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto"
+            className="bg-card border border-subtle rounded-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto"
           >
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-semibold text-charcoal">Create New Defect</h3>
+              <h3 className="text-xl font-semibold text-foreground">Create New Defect</h3>
               <button
                 onClick={() => setShowNewDefectModal(false)}
-                className="p-2 text-slate hover:text-charcoal transition-colors"
+                className="p-2 text-menu hover:text-foreground hover:bg-white/10 rounded transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -378,7 +343,7 @@ const Defects = () => {
               {/* Basic Information */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-charcoal mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Defect Title <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -392,7 +357,7 @@ const Defects = () => {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-charcoal mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Assigned To
                   </label>
                   <input
@@ -406,7 +371,7 @@ const Defects = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-charcoal mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   Description <span className="text-red-500">*</span>
                 </label>
                 <textarea
@@ -421,7 +386,7 @@ const Defects = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-charcoal mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Severity <span className="text-red-500">*</span>
                   </label>
                   <select 
@@ -439,7 +404,7 @@ const Defects = () => {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-charcoal mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Priority <span className="text-red-500">*</span>
                   </label>
                   <select 
@@ -457,7 +422,7 @@ const Defects = () => {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-charcoal mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Project <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -473,7 +438,7 @@ const Defects = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-charcoal mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Module
                   </label>
                   <input
@@ -486,7 +451,7 @@ const Defects = () => {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-charcoal mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Environment
                   </label>
                   <input
@@ -501,7 +466,7 @@ const Defects = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-charcoal mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Browser
                   </label>
                   <input
@@ -514,7 +479,7 @@ const Defects = () => {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-charcoal mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Operating System
                   </label>
                   <input
@@ -528,7 +493,7 @@ const Defects = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-charcoal mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   Steps to Reproduce
                 </label>
                 <textarea
@@ -542,7 +507,7 @@ const Defects = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-charcoal mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                     Expected Behavior
                   </label>
                   <textarea
@@ -555,7 +520,7 @@ const Defects = () => {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-charcoal mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                     Actual Behavior
                   </label>
                   <textarea
@@ -594,13 +559,13 @@ const Defects = () => {
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto"
+            className="bg-card border border-subtle rounded-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto"
           >
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-semibold text-charcoal">Defect Details</h3>
+              <h3 className="text-xl font-semibold text-foreground">Defect Details</h3>
               <button
                 onClick={() => setShowViewDefectModal(false)}
-                className="p-2 text-slate hover:text-charcoal transition-colors"
+                className="p-2 text-menu hover:text-foreground hover:bg-white/10 rounded transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -609,11 +574,11 @@ const Defects = () => {
             <div className="space-y-6">
               {/* Header */}
               <div className="flex items-start space-x-4">
-                <div className="w-12 h-12 bg-red-50 rounded-lg flex items-center justify-center">
-                  <AlertTriangle className="w-6 h-6 text-red-500" />
+                <div className="w-12 h-12 bg-red-900/20 rounded-lg flex items-center justify-center">
+                  <AlertTriangle className="w-6 h-6 text-red-400" />
                 </div>
                 <div className="flex-1">
-                  <h4 className="text-lg font-semibold text-charcoal">{selectedDefect.id}: {selectedDefect.title}</h4>
+                  <h4 className="text-lg font-semibold text-foreground">{selectedDefect.id}: {selectedDefect.title}</h4>
                   <div className="flex items-center space-x-3 mt-2">
                     <span className={`text-xs px-2 py-1 rounded-full ${statusColors[selectedDefect.status]}`}>
                       {selectedDefect.status}
@@ -621,7 +586,7 @@ const Defects = () => {
                     <span className={`text-xs px-2 py-1 rounded-full ${severityColors[selectedDefect.severity]}`}>
                       {selectedDefect.severity}
                     </span>
-                    <span className={`text-xs font-medium ${priorityColors[selectedDefect.priority]}`}>
+                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${priorityColors[selectedDefect.priority]}`}>
                       {selectedDefect.priority} Priority
                     </span>
                   </div>
@@ -630,52 +595,52 @@ const Defects = () => {
 
               {/* Description */}
               <div>
-                <h5 className="font-semibold text-charcoal mb-2">Description</h5>
-                <p className="text-slate bg-slate-light p-3 rounded-lg">{selectedDefect.description}</p>
+                <h5 className="font-semibold text-foreground mb-2">Description</h5>
+                <p className="text-menu bg-white/5 p-3 rounded-lg">{selectedDefect.description}</p>
               </div>
 
               {/* Details Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <h5 className="font-semibold text-charcoal mb-3">Basic Information</h5>
+                  <h5 className="font-semibold text-foreground mb-3">Basic Information</h5>
                   <div className="space-y-3">
                     <div>
-                      <span className="text-sm font-medium text-slate">Project:</span>
-                      <p className="text-charcoal">{selectedDefect.project}</p>
+                      <span className="text-sm font-medium text-menu">Project:</span>
+                      <p className="text-foreground">{selectedDefect.project}</p>
                     </div>
                     <div>
-                      <span className="text-sm font-medium text-slate">Module:</span>
-                      <p className="text-charcoal">{selectedDefect.module}</p>
+                      <span className="text-sm font-medium text-menu">Module:</span>
+                      <p className="text-foreground">{selectedDefect.module}</p>
                     </div>
                     <div>
-                      <span className="text-sm font-medium text-slate">Reporter:</span>
-                      <p className="text-charcoal">{selectedDefect.reporter}</p>
+                      <span className="text-sm font-medium text-menu">Reporter:</span>
+                      <p className="text-foreground">{selectedDefect.reporter}</p>
                     </div>
                     <div>
-                      <span className="text-sm font-medium text-slate">Assigned To:</span>
-                      <p className="text-charcoal">{selectedDefect.assignedTo}</p>
+                      <span className="text-sm font-medium text-menu">Assigned To:</span>
+                      <p className="text-foreground">{selectedDefect.assignedTo}</p>
                     </div>
                   </div>
                 </div>
                 
                 <div>
-                  <h5 className="font-semibold text-charcoal mb-3">Technical Details</h5>
+                  <h5 className="font-semibold text-foreground mb-3">Technical Details</h5>
                   <div className="space-y-3">
                     <div>
-                      <span className="text-sm font-medium text-slate">Environment:</span>
-                      <p className="text-charcoal">{selectedDefect.environment || 'Not specified'}</p>
+                      <span className="text-sm font-medium text-menu">Environment:</span>
+                      <p className="text-foreground">{selectedDefect.environment || 'Not specified'}</p>
                     </div>
                     <div>
-                      <span className="text-sm font-medium text-slate">Browser:</span>
-                      <p className="text-charcoal">{selectedDefect.browser || 'Not specified'}</p>
+                      <span className="text-sm font-medium text-menu">Browser:</span>
+                      <p className="text-foreground">{selectedDefect.browser || 'Not specified'}</p>
                     </div>
                     <div>
-                      <span className="text-sm font-medium text-slate">OS:</span>
-                      <p className="text-charcoal">{selectedDefect.os || 'Not specified'}</p>
+                      <span className="text-sm font-medium text-menu">OS:</span>
+                      <p className="text-foreground">{selectedDefect.os || 'Not specified'}</p>
                     </div>
                     <div>
-                      <span className="text-sm font-medium text-slate">Created:</span>
-                      <p className="text-charcoal">{selectedDefect.createdDate}</p>
+                      <span className="text-sm font-medium text-menu">Created:</span>
+                      <p className="text-foreground">{selectedDefect.createdDate}</p>
                     </div>
                   </div>
                 </div>
@@ -684,9 +649,9 @@ const Defects = () => {
               {/* Steps and Behavior */}
               {selectedDefect.stepsToReproduce && (
                 <div>
-                  <h5 className="font-semibold text-charcoal mb-2">Steps to Reproduce</h5>
-                  <div className="bg-slate-light p-3 rounded-lg">
-                    <pre className="text-sm text-charcoal whitespace-pre-wrap">{selectedDefect.stepsToReproduce}</pre>
+                  <h5 className="font-semibold text-foreground mb-2">Steps to Reproduce</h5>
+                  <div className="bg-white/5 p-3 rounded-lg">
+                    <pre className="text-sm text-foreground whitespace-pre-wrap">{selectedDefect.stepsToReproduce}</pre>
                   </div>
                 </div>
               )}
@@ -694,21 +659,21 @@ const Defects = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {selectedDefect.expectedBehavior && (
                   <div>
-                    <h5 className="font-semibold text-charcoal mb-2">Expected Behavior</h5>
-                    <p className="text-slate bg-slate-light p-3 rounded-lg">{selectedDefect.expectedBehavior}</p>
+                    <h5 className="font-semibold text-foreground mb-2">Expected Behavior</h5>
+                    <p className="text-menu bg-white/5 p-3 rounded-lg">{selectedDefect.expectedBehavior}</p>
                   </div>
                 )}
                 
                 {selectedDefect.actualBehavior && (
                   <div>
-                    <h5 className="font-semibold text-charcoal mb-2">Actual Behavior</h5>
-                    <p className="text-slate bg-slate-light p-3 rounded-lg">{selectedDefect.actualBehavior}</p>
+                    <h5 className="font-semibold text-foreground mb-2">Actual Behavior</h5>
+                    <p className="text-menu bg-white/5 p-3 rounded-lg">{selectedDefect.actualBehavior}</p>
                   </div>
                 )}
               </div>
 
               {/* Activity */}
-              <div className="flex items-center space-x-6 text-sm text-slate border-t border-grey-light pt-4">
+              <div className="flex items-center space-x-6 text-sm text-menu border-t border-subtle pt-4">
                 <div className="flex items-center space-x-1">
                   <MessageSquare className="w-4 h-4" />
                   <span>{selectedDefect.comments} comments</span>
@@ -735,13 +700,13 @@ const Defects = () => {
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto"
+            className="bg-card border border-subtle rounded-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto"
           >
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-semibold text-charcoal">Edit Defect</h3>
+              <h3 className="text-xl font-semibold text-foreground">Edit Defect</h3>
               <button
                 onClick={() => setShowEditDefectModal(false)}
-                className="p-2 text-slate hover:text-charcoal transition-colors"
+                className="p-2 text-menu hover:text-foreground hover:bg-white/10 rounded transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -751,7 +716,7 @@ const Defects = () => {
               {/* Basic Information */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-charcoal mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Defect Title <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -765,7 +730,7 @@ const Defects = () => {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-charcoal mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Status
                   </label>
                   <select 
@@ -783,7 +748,7 @@ const Defects = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-charcoal mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   Description <span className="text-red-500">*</span>
                 </label>
                 <textarea
@@ -798,7 +763,7 @@ const Defects = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-charcoal mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Severity
                   </label>
                   <select 
@@ -814,7 +779,7 @@ const Defects = () => {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-charcoal mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Priority
                   </label>
                   <select 
@@ -830,7 +795,7 @@ const Defects = () => {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-charcoal mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Assigned To
                   </label>
                   <input
@@ -845,7 +810,7 @@ const Defects = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-charcoal mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Project
                   </label>
                   <input
@@ -858,7 +823,7 @@ const Defects = () => {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-charcoal mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Module
                   </label>
                   <input
@@ -873,7 +838,7 @@ const Defects = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-charcoal mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Environment
                   </label>
                   <input
@@ -886,7 +851,7 @@ const Defects = () => {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-charcoal mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Browser
                   </label>
                   <input
@@ -899,7 +864,7 @@ const Defects = () => {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-charcoal mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Operating System
                   </label>
                   <input
@@ -913,7 +878,7 @@ const Defects = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-charcoal mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   Steps to Reproduce
                 </label>
                 <textarea
@@ -927,7 +892,7 @@ const Defects = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-charcoal mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                     Expected Behavior
                   </label>
                   <textarea
@@ -940,7 +905,7 @@ const Defects = () => {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-charcoal mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                     Actual Behavior
                   </label>
                   <textarea

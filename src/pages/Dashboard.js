@@ -198,8 +198,8 @@ const Dashboard = () => {
       ];
     } else {
       return [
-        { label: 'Create Test Case', icon: FileText, action: () => navigate('/test-cases') },
-        { label: 'Log Defect', icon: AlertTriangle, action: () => navigate('/defects') },
+        { label: 'Create Test Case', icon: FileText, action: () => navigate('/test-cases'), primary: true },
+        { label: 'Raise Defect', icon: AlertTriangle, action: () => navigate('/defects'), primary: true },
         { label: 'View Reports', icon: BarChart3, action: () => navigate('/reports') }
       ];
     }
@@ -224,8 +224,8 @@ const Dashboard = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-semibold text-charcoal">{getDashboardTitle()}</h1>
-          <p className="text-slate mt-1">{getDashboardSubtitle()}</p>
+          <h1 className="text-3xl font-semibold text-foreground">{getDashboardTitle()}</h1>
+          <p className="text-menu mt-1">{getDashboardSubtitle()}</p>
           {currentUserData?.roles.includes('APP_ADMIN') && (
             <div className="flex items-center mt-2 text-sm text-blue-600">
               <Globe className="w-4 h-4 mr-1" />
@@ -236,11 +236,13 @@ const Dashboard = () => {
         <div className="flex space-x-3">
           {quickActions.map((action, index) => {
             const Icon = action.icon;
+            const isPrimary = action.label === 'Create Test Case' || action.label === 'Raise Defect' ? action.label === 'Raise Defect' : Boolean(action.primary);
             return (
-              <button 
+              <button
                 key={action.label}
                 onClick={action.action}
-                className="btn-secondary"
+                className={`${isPrimary ? 'btn-primary' : 'btn-secondary'} inline-flex items-center`}
+                title={action.label}
               >
                 <Icon className="w-4 h-4 mr-2" />
                 {action.label}

@@ -28,6 +28,7 @@ const Projects = () => {
   const [selectedProject, setSelectedProject] = useState(null);
   const [availableOrgs, setAvailableOrgs] = useState([]);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [showOnlyActive, setShowOnlyActive] = useState(false);
   const [formData, setFormData] = useState({
     organizationId: '',
     name: '',
@@ -53,16 +54,16 @@ const Projects = () => {
       const isAdmin = currentUserData?.roles?.includes('APP_ADMIN');
       let list = [];
       if (isAdmin && (!formData.organizationId && !currentOrganization?.organisationId)) {
-        list = await getAllProjects({ includeInactive: false });
+        list = await getAllProjects({ includeInactive: !showOnlyActive });
       } else {
         const orgId = isAdmin ? (formData.organizationId || currentOrganization?.organisationId || null)
                               : (currentOrganization?.organisationId || currentUserData?.organisationId || null);
-        list = await getProjects(orgId, { includeInactive: true });
+        list = await getProjects(orgId, { includeInactive: !showOnlyActive });
       }
       setProjects(list);
     };
     load();
-  }, [currentUser, currentUserData, currentOrganization, formData.organizationId, getProjects, getOrganizations]);
+  }, [currentUser, currentUserData, currentOrganization, formData.organizationId, getProjects, getOrganizations, getAllProjects, showOnlyActive]);
 
   // Auto-hide success messages after 3 seconds
   useEffect(() => {
@@ -101,7 +102,7 @@ const Projects = () => {
       });
       
       // Refresh the projects list
-      const refreshed = await getProjects(orgId);
+      const refreshed = await getProjects(orgId, { includeInactive: !showOnlyActive });
       setProjects(refreshed);
       
       showMessage('success', `Project "${newProject.name}" created successfully!`);
@@ -121,7 +122,7 @@ const Projects = () => {
       setSelectedProject(null);
       
       // Refresh the projects list
-      const refreshed = await getProjects(orgId);
+      const refreshed = await getProjects(orgId, { includeInactive: !showOnlyActive });
       setProjects(refreshed);
       
       showMessage('success', `Project "${formData.name}" updated successfully!`);
@@ -140,7 +141,7 @@ const Projects = () => {
         console.log('Project deleted:', projectId);
         
         // Refresh the projects list
-        const refreshed = await getProjects(orgId);
+      const refreshed = await getProjects(orgId, { includeInactive: !showOnlyActive });
         setProjects(refreshed);
         
         showMessage('success', `Project "${projectToDelete?.name}" deleted successfully!`);
@@ -223,7 +224,7 @@ const Projects = () => {
   }
 
   // Check if user has permission to access project management
-  const allowedRoles = ['APP_ADMIN', 'ORG_ADMIN', 'ANALYST'];
+  const allowedRoles = ['APP_ADMIN', 'ORG_ADMIN', 'PROJECT_MANAGER', 'ANALYST'];
   if (!currentUserData?.roles?.some(role => allowedRoles.includes(role))) {
     return (
       <div className="p-6">
@@ -269,7 +270,19 @@ const Projects = () => {
               <Grid className="w-4 h-4" />
             </button>
           </div>
-          {(currentUserData?.roles?.includes('APP_ADMIN') || currentUserData?.roles?.includes('ORG_ADMIN')) && (
+          <label className="flex items-center ml-3 select-none" title="Show only Active projects">
+            <input
+              type="checkbox"
+              className="sr-only"
+              checked={showOnlyActive}
+              onChange={(e) => setShowOnlyActive(e.target.checked)}
+            />
+            <span className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${showOnlyActive ? 'bg-green-600' : 'bg-white/10 border border-subtle'}`}>
+              <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${showOnlyActive ? 'translate-x-6' : 'translate-x-1'}`}></span>
+            </span>
+            <span className="ml-2 text-sm text-menu">Active only</span>
+          </label>
+          {(currentUserData?.roles?.includes('APP_ADMIN') || currentUserData?.roles?.includes('ORG_ADMIN') || currentUserData?.roles?.includes('PROJECT_MANAGER')) && (
             <button
               onClick={() => setShowCreateModal(true)}
               className="btn-primary flex items-center space-x-2"

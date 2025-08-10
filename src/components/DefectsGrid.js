@@ -5,7 +5,6 @@ import {
   ArrowUp,
   ArrowDown,
   Circle,
-  User,
   Clock,
   MessageSquare,
   Paperclip,
@@ -41,7 +40,7 @@ const DefectsGrid = ({ defects, onViewDefect, onEditDefect, onDeleteDefect }) =>
     }));
   }, [defects]);
 
-  // Column definitions for headless table
+  // Column definitions matching TestCasesGrid look & feel
   const columns = [
     {
       id: 'id',
@@ -49,7 +48,7 @@ const DefectsGrid = ({ defects, onViewDefect, onEditDefect, onDeleteDefect }) =>
       accessorKey: 'id',
       size: 150,
       cell: ({ getValue }) => (
-        <span className="inline-flex items-center px-2 py-1 rounded-full text-sm font-medium bg-gradient-to-r from-red-500 to-red-600 text-white">{getValue()}</span>
+        <span className="inline-flex items-center px-2 py-1 rounded-full text-sm font-medium bg-[rgb(var(--tc-icon))]/20 text-[rgb(var(--tc-contrast))]">{getValue()}</span>
       ),
       filterType: 'text',
     },
@@ -59,7 +58,7 @@ const DefectsGrid = ({ defects, onViewDefect, onEditDefect, onDeleteDefect }) =>
       accessorKey: 'title',
       size: 350,
       cell: ({ getValue }) => (
-        <div className="font-medium text-gray-900 truncate w-full" title={getValue()}>{getValue()}</div>
+        <div className="font-medium text-foreground truncate max-w-[340px]" title={getValue()}>{getValue()}</div>
       ),
       filterType: 'text',
     },
@@ -71,28 +70,23 @@ const DefectsGrid = ({ defects, onViewDefect, onEditDefect, onDeleteDefect }) =>
       cell: ({ getValue }) => {
         const config = {
           'Open': {
-            bg: 'bg-gradient-to-r from-red-500 to-red-600',
-            text: 'text-white',
-            icon: '●'
+            classes: 'bg-red-900/20 text-red-400',
+            icon: '○'
           },
           'In Progress': {
-            bg: 'bg-gradient-to-r from-amber-500 to-amber-600',
-            text: 'text-white',
+            classes: 'bg-amber-900/20 text-amber-300',
             icon: '⟳'
           },
           'Resolved': {
-            bg: 'bg-gradient-to-r from-emerald-500 to-emerald-600',
-            text: 'text-white',
+            classes: 'bg-green-900/20 text-green-400',
             icon: '✓'
           },
           'Closed': {
-            bg: 'bg-gradient-to-r from-gray-400 to-gray-500',
-            text: 'text-white',
+            classes: 'bg-white/5 text-menu',
             icon: '✗'
           },
           'On Hold': {
-            bg: 'bg-gradient-to-r from-purple-500 to-purple-600',
-            text: 'text-white',
+            classes: 'bg-purple-900/20 text-purple-300',
             icon: '⏸'
           }
         };
@@ -100,7 +94,7 @@ const DefectsGrid = ({ defects, onViewDefect, onEditDefect, onDeleteDefect }) =>
         const style = config[value] || config['Open'];
         
         return (
-          <span className={`inline-flex items-center space-x-1 px-2 py-1 rounded-full text-sm font-medium ${style.bg} ${style.text}`}>
+          <span className={`inline-flex items-center h-7 space-x-1 px-2 rounded-full text-sm font-medium ${style.classes}`}>
             <span className="text-sm">{style.icon}</span>
             <span>{value}</span>
           </span>
@@ -113,38 +107,25 @@ const DefectsGrid = ({ defects, onViewDefect, onEditDefect, onDeleteDefect }) =>
       header: 'Severity',
       accessorKey: 'severity',
       size: 120,
-      cell: () => {
+      cell: ({ getValue }) => {
         const config = {
-          'Critical': { 
-            icon: <AlertTriangle className="w-3 h-3 text-white" />,
-            bg: 'bg-gradient-to-r from-red-600 to-red-700',
-            text: 'text-white'
-          },
-          'High': { 
-            icon: <ArrowUp className="w-3 h-3 text-white" />,
-            bg: 'bg-gradient-to-r from-red-500 to-red-600',
-            text: 'text-white'
-          },
-          'Medium': { 
-            icon: <Circle className="w-3 h-3 text-white" />,
-            bg: 'bg-gradient-to-r from-amber-500 to-amber-600',
-            text: 'text-white'
-          },
-          'Low': { 
-            icon: <ArrowDown className="w-3 h-3 text-white" />,
-            bg: 'bg-gradient-to-r from-green-500 to-green-600',
-            text: 'text-white'
-          }
+          'Critical': { icon: <AlertTriangle className="w-3 h-3 text-red-400" />, classes: 'bg-red-900/20 text-red-400' },
+          'High': { icon: <ArrowUp className="w-3 h-3 text-red-400" />, classes: 'bg-red-900/20 text-red-400' },
+          'Medium': { icon: <Circle className="w-3 h-3 text-orange-300" />, classes: 'bg-orange-900/20 text-orange-300' },
+          'Low': { icon: <ArrowDown className="w-3 h-3 text-green-400" />, classes: 'bg-green-900/20 text-green-400' },
         };
-        const style = config['Medium'];
-        
+        const value = getValue();
+        const style = config[value] || config['Medium'];
         return (
-          <div className={`flex items-center space-x-1 px-2 py-1 rounded-full text-sm font-medium ${style.bg} ${style.text}`}>
-            {style.icon}
-            <span>Medium</span>
+          <div className={`h-full flex items-center`}>
+            <div className={`inline-flex items-center h-7 space-x-1 px-2 rounded-full text-sm font-medium ${style.classes}`}>
+              {style.icon}
+              <span>{value || 'Medium'}</span>
+            </div>
           </div>
         );
       },
+      filterType: 'select',
     },
     {
       id: 'priority',
@@ -153,34 +134,20 @@ const DefectsGrid = ({ defects, onViewDefect, onEditDefect, onDeleteDefect }) =>
       size: 120,
       cell: ({ getValue }) => {
         const config = {
-          'Critical': { 
-            icon: <AlertTriangle className="w-3 h-3 text-white" />,
-            bg: 'bg-gradient-to-r from-red-600 to-red-700',
-            text: 'text-white'
-          },
-          'High': { 
-            icon: <ArrowUp className="w-3 h-3 text-white" />,
-            bg: 'bg-gradient-to-r from-red-500 to-red-600',
-            text: 'text-white'
-          },
-          'Medium': { 
-            icon: <Circle className="w-3 h-3 text-white" />,
-            bg: 'bg-gradient-to-r from-blue-500 to-blue-600',
-            text: 'text-white'
-          },
-          'Low': { 
-            icon: <ArrowDown className="w-3 h-3 text-white" />,
-            bg: 'bg-gradient-to-r from-green-500 to-green-600',
-            text: 'text-white'
-          }
+          'Critical': { icon: <AlertTriangle className="w-3 h-3 text-red-400" />, classes: 'bg-red-900/20 text-red-400' },
+          'High': { icon: <ArrowUp className="w-3 h-3 text-red-400" />, classes: 'bg-red-900/20 text-red-400' },
+          'Medium': { icon: <Circle className="w-3 h-3 text-orange-300" />, classes: 'bg-orange-900/20 text-orange-300' },
+          'Low': { icon: <ArrowDown className="w-3 h-3 text-green-400" />, classes: 'bg-green-900/20 text-green-400' },
         };
         const value = getValue();
         const style = config[value] || config['Medium'];
         
         return (
-          <div className={`flex items-center space-x-1 px-2 py-1 rounded-full text-sm font-medium ${style.bg} ${style.text}`}>
-            {style.icon}
-            <span>{value}</span>
+          <div className={`h-full flex items-center`}>
+            <div className={`inline-flex items-center h-7 space-x-1 px-2 rounded-full text-sm font-medium ${style.classes}`}>
+              {style.icon}
+              <span>{value}</span>
+            </div>
           </div>
         );
       },
@@ -193,11 +160,11 @@ const DefectsGrid = ({ defects, onViewDefect, onEditDefect, onDeleteDefect }) =>
       size: 180,
       cell: ({ getValue }) => {
         const colors = [
-          'from-purple-500 to-pink-500',
-          'from-blue-500 to-cyan-500', 
-          'from-green-500 to-emerald-500',
-          'from-orange-500 to-red-500',
-          'from-indigo-500 to-purple-500'
+          'from-blue-600 to-cyan-500',
+          'from-violet-600 to-fuchsia-500',
+          'from-emerald-600 to-green-500',
+          'from-orange-600 to-red-500',
+          'from-indigo-600 to-purple-500',
         ];
         const value = getValue();
         const assigneeInitials = value?.split(' ').map(n => n[0]).join('').toUpperCase() || 'UN';
@@ -208,15 +175,15 @@ const DefectsGrid = ({ defects, onViewDefect, onEditDefect, onDeleteDefect }) =>
             <div className={`w-6 h-6 bg-gradient-to-br ${colors[colorIndex]} rounded-full flex items-center justify-center`}>
               <span className="text-white text-xs font-bold">{assigneeInitials}</span>
             </div>
-            <span className="text-sm font-medium text-gray-900">{value || 'Unassigned'}</span>
+            <span className="text-sm font-medium text-foreground">{value || 'Unassigned'}</span>
           </div>
         );
       },
       filterType: 'text',
     },
-    { id: 'project', header: 'Project', accessorKey: 'project', size: 160, cell: ({ getValue }) => (<span className="text-sm text-gray-700">{getValue()}</span>), filterType: 'text' },
+    { id: 'project', header: 'Project', accessorKey: 'project', size: 160, cell: ({ getValue }) => (<span className="text-sm text-foreground">{getValue()}</span>), filterType: 'text' },
     {
-      id: 'module', header: 'Module', accessorKey: 'module', size: 140, cell: ({ getValue }) => (<span className="text-sm text-gray-700">{getValue()}</span>), filterType: 'text'
+      id: 'module', header: 'Module', accessorKey: 'module', size: 140, cell: ({ getValue }) => (<span className="text-sm text-foreground">{getValue()}</span>), filterType: 'text'
     },
     {
       id: 'updatedDate',
@@ -225,8 +192,8 @@ const DefectsGrid = ({ defects, onViewDefect, onEditDefect, onDeleteDefect }) =>
       size: 120,
       cell: ({ getValue }) => (
         <div className="flex items-center space-x-1">
-          <Clock className="w-3 h-3 text-gray-500" />
-          <span className="text-sm text-gray-600">{getValue()}</span>
+          <Clock className="w-3 h-3 text-menu" />
+          <span className="text-sm text-menu">{getValue()}</span>
         </div>
       ),
       filterType: 'text',
@@ -238,8 +205,8 @@ const DefectsGrid = ({ defects, onViewDefect, onEditDefect, onDeleteDefect }) =>
       size: 100,
       cell: ({ getValue }) => (
         <div className="flex items-center space-x-1">
-          <MessageSquare className="w-3 h-3 text-gray-500" />
-          <span className="text-sm text-gray-600">{getValue()}</span>
+          <MessageSquare className="w-3 h-3 text-menu" />
+          <span className="text-sm text-menu">{getValue()}</span>
         </div>
       ),
       filterType: 'text',
@@ -252,11 +219,11 @@ const DefectsGrid = ({ defects, onViewDefect, onEditDefect, onDeleteDefect }) =>
       cell: ({ getValue }) => (
         getValue() > 0 ? (
           <div className="flex items-center space-x-1">
-            <Paperclip className="w-3 h-3 text-gray-500" />
-            <span className="text-sm text-gray-600">{getValue()}</span>
+            <Paperclip className="w-3 h-3 text-menu" />
+            <span className="text-sm text-menu">{getValue()}</span>
           </div>
         ) : (
-          <span className="text-sm text-gray-400">—</span>
+          <span className="text-sm text-menu">—</span>
         )
       ),
       filterType: 'text',
@@ -264,18 +231,18 @@ const DefectsGrid = ({ defects, onViewDefect, onEditDefect, onDeleteDefect }) =>
     {
       id: 'actions',
       header: 'Actions',
-      size: 120,
+      size: 140,
       enableSorting: false,
       enableColumnFilter: false,
       cell: ({ row }) => (
-        <div className="flex items-center space-x-1">
+        <div className="h-full flex items-center space-x-1">
           <button
             onClick={(e) => {
               e.stopPropagation();
               onViewDefect(row.original.originalData);
             }}
-            className="p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-            title="View Defect"
+            className="p-1.5 text-menu hover:text-white hover:bg-white/10 rounded transition-colors"
+            title="View Details"
           >
             <Eye className="w-4 h-4" />
           </button>
@@ -284,7 +251,7 @@ const DefectsGrid = ({ defects, onViewDefect, onEditDefect, onDeleteDefect }) =>
               e.stopPropagation();
               onEditDefect(row.original.originalData);
             }}
-            className="p-1 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
+            className="p-1.5 text-menu hover:text-white hover:bg-white/10 rounded transition-colors"
             title="Edit Defect"
           >
             <Edit className="w-4 h-4" />
@@ -294,7 +261,7 @@ const DefectsGrid = ({ defects, onViewDefect, onEditDefect, onDeleteDefect }) =>
               e.stopPropagation();
               onDeleteDefect(row.original.originalData);
             }}
-            className="p-1 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+            className="p-1.5 text-menu hover:text-red-300 hover:bg-red-900/20 rounded transition-colors"
             title="Delete Defect"
           >
             <Trash2 className="w-4 h-4" />
@@ -306,24 +273,25 @@ const DefectsGrid = ({ defects, onViewDefect, onEditDefect, onDeleteDefect }) =>
 
   return (
     <div className="space-y-6">
-      {/* MUI DataGrid */}
-      <div className="bg-white rounded-lg shadow-lg border border-gray-200">
-        <div className="flex items-center justify-between p-4 bg-gray-50 border-b border-gray-200">
+      <div className="bg-card rounded-lg shadow-lg border border-subtle">
+        <div className="flex items-center justify-between p-4 bg-surface-muted border-b border-subtle">
           <div className="flex items-center space-x-4">
-            <h3 className="text-lg font-semibold text-gray-900">Defects</h3>
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
+            <h3 className="text-lg font-semibold text-foreground">Defects</h3>
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-[rgb(var(--tc-icon))]/20 text-[rgb(var(--tc-contrast))]">
               {gridData.length} total
             </span>
           </div>
+          <div />
         </div>
         
-        <div style={{ height: 600, width: '100%' }}>
+        <div className="w-full">
           <DataTable
             data={gridData}
             columns={columns}
             defaultPageSize={20}
             pageSizeOptions={[10, 20, 50]}
             emptyMessage="No defects"
+            className="text-foreground"
           />
         </div>
       </div>

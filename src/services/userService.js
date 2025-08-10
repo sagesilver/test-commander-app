@@ -128,10 +128,30 @@ export const createUser = async (userData, createdBy) => {
 // Get user by ID
 export const getUserById = async (userId) => {
   try {
+    // Primary: fetch by document id (expected UID)
     const userDoc = await getDoc(doc(db, "users", userId));
     if (userDoc.exists()) {
       return { id: userDoc.id, ...userDoc.data() };
     }
+
+    // Fallback 1: some legacy docs may be keyed differently, but have userId field
+    let q = query(collection(db, "users"), where("userId", "==", userId));
+    let snap = await getDocs(q);
+    if (!snap.empty) {
+      const d = snap.docs[0];
+      return { id: d.id, ...d.data() };
+    }
+
+    // Fallback 2: if the incoming id looks like an email, try match on email
+    if (typeof userId === 'string' && userId.includes('@')) {
+      q = query(collection(db, "users"), where("email", "==", userId.toLowerCase()));
+      snap = await getDocs(q);
+      if (!snap.empty) {
+        const d = snap.docs[0];
+        return { id: d.id, ...d.data() };
+      }
+    }
+
     return null;
   } catch (error) {
     console.error("Error getting user:", error);
@@ -299,6 +319,7 @@ export const getAvailableRoles = (currentUserRoles) => {
   const allRoles = [
     { value: USER_ROLES.APP_ADMIN, label: "App Administrator", description: "System-wide access" },
     { value: USER_ROLES.ORG_ADMIN, label: "Organization Administrator", description: "Organization-level access" },
+    { value: USER_ROLES.PROJECT_MANAGER, label: "Project Manager", description: "Project-level administration and reporting" },
     { value: USER_ROLES.ANALYST, label: "Analyst", description: "Test analysis and design" },
     { value: USER_ROLES.TEST_ENGINEER, label: "Test Engineer", description: "Test execution and results" },
     { value: USER_ROLES.DEFECT_COORDINATOR, label: "Defect Coordinator", description: "Defect management" },

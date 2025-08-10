@@ -34,6 +34,7 @@ import { useTheme } from '../contexts/ThemeContext';
 const Navigation = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
   const [expandedSections, setExpandedSections] = useState(['main']);
   const location = useLocation();
   const { currentUser, currentUserData, currentOrganization, logout } = useAuth();
@@ -70,6 +71,11 @@ const Navigation = () => {
       { path: '/organization-reports', label: 'Organization Reports', icon: BarChart3, section: 'admin' },
     ];
 
+    // Project Manager items (avoid duplicating base main items)
+    const projectManagerItems = [
+      { path: '/projects', label: 'Projects', icon: FileText, section: 'admin' },
+    ];
+
     // Analyst items
     const analystItems = [
       { path: '/test-analysis', label: 'Test Analysis', icon: BarChart3, section: 'analyst' },
@@ -99,6 +105,9 @@ const Navigation = () => {
     }
     if (role.includes('ORG_ADMIN')) {
       allItems = [...allItems, ...orgAdminItems];
+    }
+    if (role.includes('PROJECT_MANAGER')) {
+      allItems = [...allItems, ...projectManagerItems];
     }
     if (role.includes('ANALYST')) {
       allItems = [...allItems, ...analystItems];
@@ -143,7 +152,14 @@ const Navigation = () => {
 
   const isActive = (path) => location.pathname === path;
 
-  const navItems = menuItems.filter(item => item.section === 'main');
+  // De-duplicate main nav items by path
+  const navItems = Array.from(
+    new Map(
+      menuItems
+        .filter(item => item.section === 'main')
+        .map(item => [item.path, item])
+    ).values()
+  );
 
   return (
     <>
@@ -196,7 +212,7 @@ const Navigation = () => {
             </div>
 
             {/* User Menu */}
-            <div className="hidden md:flex items-center space-x-4">
+            <div className="hidden md:flex items-center space-x-3">
               {currentUser && (
                 <div className="flex items-center space-x-3">
                   {/* Theme toggle */}
@@ -234,6 +250,14 @@ const Navigation = () => {
                   >
                     <LogOut className="w-4 h-4 text-white" />
                     <span>Logout</span>
+                  </button>
+                  {/* Right Sidebar Toggle (blue hamburger) */}
+                  <button
+                    onClick={() => setIsRightSidebarOpen(true)}
+                    className="p-2 text-[rgb(var(--tc-icon))] hover:brightness-110 transition-colors"
+                    title="Open Menu"
+                  >
+                    <Menu className="w-5 h-5" />
                   </button>
                 </div>
               )}
@@ -438,11 +462,76 @@ const Navigation = () => {
       </div>
       )}
 
+      {/* Right Sidebar */}
+      {isRightSidebarOpen && (
+      <div className={`fixed inset-y-0 right-0 z-50 w-64 bg-card shadow-lg`}>
+        <div className="flex flex-col h-full">
+          {/* Sidebar Header */}
+          <div className="flex items-center justify-between p-4 border-b border-subtle">
+            <h2 className="text-lg font-semibold text-foreground">Menu</h2>
+            <button
+              onClick={() => setIsRightSidebarOpen(false)}
+              className="p-1 text-muted hover:text-foreground transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          {/* Sidebar Content */}
+          <div className="flex-1 overflow-y-auto py-4">
+            {Object.entries(groupedItems).map(([section, items]) => (
+              <div key={section} className="mb-6">
+                <button
+                  onClick={() => toggleSection(section)}
+                  className="flex items-center justify-between w-full px-4 py-2 text-sm font-medium text-foreground hover:bg-surface-muted transition-colors"
+                >
+                  <span>{sectionLabels[section]}</span>
+                  {expandedSections.includes(section) ? (
+                    <ChevronDown className="w-4 h-4" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4" />
+                  )}
+                </button>
+                {expandedSections.includes(section) && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="space-y-1"
+                  >
+                    {items.map((item) => (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        className={`flex items-center px-4 py-2 text-sm rounded-md transition-colors ${
+                          isActive(item.path)
+                            ? 'text-white bg-white/10'
+                            : 'text-menu hover:text-white hover:bg-white/10'
+                        }`}
+                        onClick={() => setIsRightSidebarOpen(false)}
+                      >
+                        {item.label}
+                      </Link>
+                    ))}
+                  </motion.div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      )}
+
       {/* Sidebar Overlay */}
       {isSidebarOpen && (
         <div 
           className="fixed inset-0 bg-black bg-opacity-50 z-40"
           onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+      {isRightSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40"
+          onClick={() => setIsRightSidebarOpen(false)}
         />
       )}
     </>

@@ -35,6 +35,11 @@ service cloud.firestore {
       return userData != null && userData.organisationId == organizationId;
     }
 
+    function isProjectManager(organizationId) {
+      let userData = getUserData();
+      return userData != null && userData.organisationId == organizationId && hasUserRole(userData.roles, 'PROJECT_MANAGER');
+    }
+
     // Users collection
     match /users/{userId} {
       allow read: if isAppAdmin() || 
@@ -71,11 +76,11 @@ service cloud.firestore {
           isOrgMember(organizationId) || isAppAdmin() || isOrgAdmin(organizationId) || isProjectAdmin()
         );
 
-        // Create restricted to App/Org Admin
-        allow create: if isAppAdmin() || isOrgAdmin(organizationId);
+        // Create allowed for App Admin, Org Admin, and Project Manager (org-scoped)
+        allow create: if isAppAdmin() || isOrgAdmin(organizationId) || isProjectManager(organizationId);
 
         // Update/Delete allowed to App/Org Admin or Project Admins
-        allow update, delete: if isAppAdmin() || isOrgAdmin(organizationId) || isProjectAdmin();
+        allow update, delete: if isAppAdmin() || isOrgAdmin(organizationId) || isProjectManager(organizationId) || isProjectAdmin();
       }
     }
   }

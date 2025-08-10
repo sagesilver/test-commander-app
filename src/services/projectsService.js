@@ -30,6 +30,14 @@ function hasOrgAdminRoleFor(currentUserData, organizationId) {
   );
 }
 
+function hasProjectManagerRoleFor(currentUserData, organizationId) {
+  return (
+    Array.isArray(currentUserData?.roles) &&
+    currentUserData.roles.includes(USER_ROLES.PROJECT_MANAGER) &&
+    currentUserData?.organisationId === organizationId
+  );
+}
+
 async function isProjectAdmin(currentUserId, organizationId, projectId) {
   const projectRef = doc(db, 'organizations', organizationId, 'projects', projectId);
   const snap = await getDoc(projectRef);
@@ -43,7 +51,9 @@ export const projectsService = {
   async createProject(currentUserData, organizationId, projectData) {
     assert(currentUserData?.userId, 'Not authenticated');
     assert(
-      hasAppAdminRole(currentUserData) || hasOrgAdminRoleFor(currentUserData, organizationId),
+      hasAppAdminRole(currentUserData) ||
+        hasOrgAdminRoleFor(currentUserData, organizationId) ||
+        hasProjectManagerRoleFor(currentUserData, organizationId),
       'Not authorized to create projects for this organization'
     );
 
@@ -140,14 +150,15 @@ export const projectsService = {
     const q = query(collection(db, 'organizations', orgId, 'projects'), ...constraints);
     const snap = await getDocs(q);
     const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    // Enrich with createdByName
+    // Enrich with createdByName (robust lookup: uid, userId field or email)
     const cache = new Map();
     for (const row of rows) {
       const creatorId = row.createdBy;
       if (creatorId && !cache.has(creatorId)) {
         try {
           const u = await getUserById(creatorId);
-          cache.set(creatorId, u?.name || u?.email || creatorId);
+          const display = u?.name || u?.email || creatorId;
+          cache.set(creatorId, display);
         } catch (_) {
           cache.set(creatorId, creatorId);
         }

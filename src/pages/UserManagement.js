@@ -23,13 +23,17 @@ const UserManagement = () => {
   const [users, setUsers] = useState([]);
   const [organizations, setOrganizations] = useState([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showOnlyActive, setShowOnlyActive] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
 
   // Load data function
   const loadData = async () => {
     if (currentUserData) {
       try {
-        const userList = await getUsers();
+        let userList = await getUsers();
+        if (showOnlyActive) {
+          userList = (userList || []).filter(u => u.isActive !== false);
+        }
         const orgList = await getOrganizations();
         setUsers(userList || []);
         setOrganizations(orgList || []);
@@ -44,7 +48,7 @@ const UserManagement = () => {
   // Initialize users and organizations on component mount
   useEffect(() => {
     loadData();
-  }, [currentUserData, getUsers, getOrganizations]);
+  }, [currentUserData, getUsers, getOrganizations, showOnlyActive]);
 
   // Auto-hide success messages after 3 seconds
   useEffect(() => {
@@ -181,13 +185,22 @@ const UserManagement = () => {
               : 'Manage users within your organization'}
           </p>
         </div>
-        <button
+        <div className="flex items-center space-x-3">
+          <label className="flex items-center select-none" title="Show only Active users">
+            <input type="checkbox" className="sr-only" checked={showOnlyActive} onChange={(e) => setShowOnlyActive(e.target.checked)} />
+            <span className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${showOnlyActive ? 'bg-green-600' : 'bg-white/10 border border-subtle'}`}>
+              <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${showOnlyActive ? 'translate-x-6' : 'translate-x-1'}`}></span>
+            </span>
+            <span className="ml-2 text-sm text-menu">Active only</span>
+          </label>
+          <button
           onClick={() => setShowCreateModal(true)}
           className="btn-primary flex items-center space-x-2"
         >
           <Plus className="w-4 h-4" />
           <span>Add User</span>
         </button>
+        </div>
       </div>
 
       <div className="bg-card rounded-lg shadow-lg border border-subtle">
