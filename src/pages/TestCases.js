@@ -15,6 +15,7 @@ import {
   Minus,
   Grid,
   List,
+  Folder as FolderIcon,
   ArrowUp,
   ArrowDown,
   Circle,
@@ -30,6 +31,8 @@ import TagPills from '../components/TagPills';
 import TagMultiSelect from '../components/TagMultiSelect';
 import ExportMenu from '../components/ExportMenu';
 import { useAuth } from '../contexts/AuthContext';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { testCaseService } from '../services/testCaseService';
 
 const TestCases = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -614,7 +617,10 @@ const TestCases = () => {
   // Projects selector (future filtering)
   const { getProjects } = useAuth();
   const [projectsList, setProjectsList] = useState([]);
+  const navigate = useNavigate();
+  const location = useLocation();
   const [selectedProjectId, setSelectedProjectId] = useState('all');
+  const [externalContext, setExternalContext] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -630,6 +636,35 @@ const TestCases = () => {
     })();
     return () => { isMounted = false; };
   }, [getProjects]);
+
+  useEffect(() => {
+    const state = location?.state || null;
+    if (!state) return;
+    const { mode, organizationId, projectId, folderId, testCase } = state;
+    if (mode === 'new' && organizationId && projectId && folderId) {
+      setExternalContext({ organizationId, projectId, folderId });
+      setShowNewTestCaseModal(true);
+    } else if (mode === 'view' && testCase) {
+      setSelectedTestCase(testCase);
+      setShowViewTestCaseModal(true);
+    } else if (mode === 'edit' && testCase) {
+      setSelectedTestCase(testCase);
+      setEditTestCaseForm({
+        tcid: testCase.tcid || '',
+        name: testCase.name || '',
+        description: testCase.description || '',
+        author: testCase.author || '',
+        testType: testCase.testType || '',
+        overallResult: testCase.overallResult || '',
+        prerequisites: testCase.prerequisites || '',
+        testSteps: Array.isArray(testCase.testSteps) ? [...testCase.testSteps] : [],
+        tags: Array.isArray(testCase.tags) ? [...testCase.tags] : []
+      });
+      setShowEditTestCaseModal(true);
+    }
+    navigate('/test-cases', { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const statusColors = {
     Passed: 'text-green-400 bg-green-900/20',
@@ -858,7 +893,7 @@ const TestCases = () => {
     }
   };
 
-  const handleNewTestCaseSubmit = (e) => {
+  const handleNewTestCaseSubmit = async (e) => {
     e.preventDefault();
     if (newTestCaseForm.testSteps.length === 0) {
       alert('Please add at least one test step.');
@@ -873,7 +908,19 @@ const TestCases = () => {
       }))
     };
     
-    // Add to first available subsystem (for demo purposes)
+    if (externalContext?.organizationId && externalContext?.projectId && externalContext?.folderId) {
+      try {
+        await testCaseService.createTestCase(externalContext.organizationId, externalContext.projectId, { ...newTestCase, folderId: externalContext.folderId });
+        setExternalContext(null);
+        setShowNewTestCaseModal(false);
+        navigate('/test-cases-folder');
+        return;
+      } catch (err) {
+        alert(`Failed to create test case: ${err?.message || err}`);
+        return;
+      }
+    }
+
     const subsystemId = 'subsystem-1';
     addTestCaseToHierarchy(newTestCase, subsystemId);
     
@@ -892,7 +939,7 @@ const TestCases = () => {
     setShowNewTestCaseModal(false);
   };
 
-  const handleEditTestCaseSubmit = (e) => {
+  const handleEditTestCaseSubmit = async (e) => {
     e.preventDefault();
     if (editTestCaseForm.testSteps.length === 0) {
       alert('Please add at least one test step.');
@@ -907,6 +954,20 @@ const TestCases = () => {
       }))
     };
     
+    if (selectedTestCase?.id) {
+      try {
+        const orgId = selectedTestCase.organizationId;
+        const projId = selectedTestCase.projectId;
+        await testCaseService.updateTestCase(orgId, projId, selectedTestCase.id, updatedTestCase);
+        setShowEditTestCaseModal(false);
+        navigate('/test-cases-folder');
+        return;
+      } catch (err) {
+        alert(`Failed to update test case: ${err?.message || err}`);
+        return;
+      }
+    }
+
     updateTestCaseInHierarchy(selectedTestCase.tcid, updatedTestCase);
     setShowEditTestCaseModal(false);
   };
@@ -1249,6 +1310,13 @@ const TestCases = () => {
                  >
                    <Grid className="w-4 h-4" />
                  </button>
+                <button
+                  onClick={() => navigate('/test-cases-folder')}
+                  className="p-2 rounded-md transition-colors text-menu hover:text-white"
+                  title="Folder View"
+                >
+                  <FolderIcon className="w-4 h-4" />
+                </button>
              </div>
            </div>
          </div>
@@ -1614,14 +1682,6 @@ const TestCases = () => {
                   </div>
                 </div>
 
-                {/* Tags */}
-                <TagMultiSelect
-                  availableTags={availableTags}
-                  value={newTestCaseForm.tags}
-                  onChange={(ids) => setNewTestCaseForm(prev => ({ ...prev, tags: ids }))}
-                  onAddTag={addOrUpdateTag}
-                />
-                
                 <div>
                   <div className="flex items-center gap-2 mb-2">
                     <BarChart3 className="h-5 w-5 text-[rgb(var(--tc-icon))]" />

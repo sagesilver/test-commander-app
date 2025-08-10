@@ -12,6 +12,7 @@ import Projects from './pages/Projects';
 import UserManagement from './pages/UserManagement';
 import OrganizationSettings from './pages/OrganizationSettings';
 import SuperUserDashboard from './components/SuperUserDashboard';
+import TestCasesFolder from './pages/TestCasesFolder';
 import Login from './pages/Login';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -47,6 +48,11 @@ function AppRoutes() {
             <Route path="/test-cases" element={
               <ProtectedRoute>
                 <TestCases />
+              </ProtectedRoute>
+            } />
+            <Route path="/test-cases-folder" element={
+              <ProtectedRoute>
+                <TestCasesFolder />
               </ProtectedRoute>
             } />
             <Route path="/defects" element={

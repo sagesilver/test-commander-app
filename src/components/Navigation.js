@@ -166,7 +166,7 @@ const Navigation = () => {
       {/* Top Navigation Bar */}
       <nav className="bg-card shadow-card">
         <div className="container mx-auto px-4">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex justify-between items-center h-20">
             {/* Logo and Sidebar Toggle */}
             <div className="flex items-center space-x-4">
               <button
@@ -188,13 +188,7 @@ const Navigation = () => {
               </Link>
             </div>
 
-            {/* Organization Context (for non-super users) */}
-            {currentOrganization && (
-              <div className="hidden md:flex items-center space-x-2 bg-surface-muted px-3 py-1 rounded-lg">
-                <Building className="w-4 h-4 text-[rgb(var(--tc-icon))]" />
-                <span className="text-sm font-medium text-foreground">{currentOrganization.name}</span>
-              </div>
-            )}
+            {/* Organization Context moved under user block */}
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-1">
@@ -242,6 +236,11 @@ const Navigation = () => {
                     <span className="text-xs text-muted">
                       {currentUserData?.roles?.join(', ') || 'No role assigned'}
                     </span>
+                    {currentOrganization && (
+                      <span className="text-xs text-muted mt-0.5">
+                        {currentOrganization.name}
+                      </span>
+                    )}
                   </div>
                   <button
                     onClick={logout}

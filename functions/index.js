@@ -302,3 +302,104 @@ exports.linkUserToProfile = functions.region('australia-southeast1').https.onCal
     throw new functions.https.HttpsError('internal', error.message);
   }
 });
+
+// Normalize TCID for global uniqueness
+function normalizeTcid(tcid) {
+  return (tcid || '')
+    .toString()
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^A-Z0-9\-]/g, '')
+    .slice(0, 100);
+}
+
+// Create a test case with globally unique TCID using an index doc
+exports.createTestCaseWithUniqueTcid = functions
+  .region('australia-southeast1')
+  .https.onCall(async (data, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+    }
+
+    const { organizationId, projectId, payload } = data || {};
+    if (!organizationId || !projectId || !payload) {
+      throw new functions.https.HttpsError('invalid-argument', 'organizationId, projectId and payload are required');
+    }
+
+    // Validate caller membership/privileges
+    const callerDoc = await db.collection('users').doc(context.auth.uid).get();
+    if (!callerDoc.exists) {
+      throw new functions.https.HttpsError('permission-denied', 'Caller has no user profile');
+    }
+    const caller = callerDoc.data();
+    const callerRoles = Array.isArray(caller.roles) ? caller.roles : [];
+    const isAppAdmin = callerRoles.includes('APP_ADMIN');
+    const isOrgAdmin = callerRoles.includes('ORG_ADMIN') && caller.organisationId === organizationId;
+    const isMember = caller.organisationId === organizationId;
+    if (!(isAppAdmin || isOrgAdmin || isMember)) {
+      throw new functions.https.HttpsError('permission-denied', 'Not authorized to create test cases for this organization');
+    }
+
+    const tcid = normalizeTcid(payload.tcid);
+    if (!tcid) {
+      throw new functions.https.HttpsError('invalid-argument', 'Valid tcid is required');
+    }
+
+    const indexRef = db.collection('tcidIndex').doc(tcid);
+    const tcColRef = db
+      .collection('organizations')
+      .doc(organizationId)
+      .collection('projects')
+      .doc(projectId)
+      .collection('testCases');
+
+    const folderId = payload.folderId || null;
+    if (folderId) {
+      const folderRef = db
+        .collection('organizations')
+        .doc(organizationId)
+        .collection('projects')
+        .doc(projectId)
+        .collection('folders')
+        .doc(folderId);
+      const folderSnap = await folderRef.get();
+      if (!folderSnap.exists) {
+        throw new functions.https.HttpsError('failed-precondition', 'Folder does not exist');
+      }
+    }
+
+    const now = admin.firestore.FieldValue.serverTimestamp();
+    const userId = context.auth.uid;
+
+    const testCaseDoc = {
+      ...payload,
+      tcid,
+      organizationId,
+      projectId,
+      folderId,
+      createdAt: now,
+      createdBy: userId,
+    };
+
+    await db.runTransaction(async (tx) => {
+      const idx = await tx.get(indexRef);
+      if (idx.exists) {
+        throw new functions.https.HttpsError('already-exists', 'TCID already exists');
+      }
+
+      const newTcRef = tcColRef.doc();
+      tx.set(newTcRef, testCaseDoc, { merge: true });
+      tx.set(indexRef, {
+        organizationId,
+        projectId,
+        testCaseId: newTcRef.id,
+        tcid,
+        createdAt: now,
+        createdBy: userId,
+      });
+    });
+
+    return { success: true, tcid };
+  });
+

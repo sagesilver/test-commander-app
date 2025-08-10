@@ -82,6 +82,44 @@ service cloud.firestore {
         // Update/Delete allowed to App/Org Admin or Project Admins
         allow update, delete: if isAppAdmin() || isOrgAdmin(organizationId) || isProjectManager(organizationId) || isProjectAdmin();
       }
+
+      // Folders subcollection
+      match /projects/{projectId}/folders/{folderId} {
+        // All org members can read and manage folders per spec
+        allow read: if isOrgMember(organizationId) || isAppAdmin() || isOrgAdmin(organizationId);
+        allow create, update, delete: if isOrgMember(organizationId) || isAppAdmin() || isOrgAdmin(organizationId);
+      }
+
+      // Test cases subcollection
+      match /projects/{projectId}/testCases/{testCaseId} {
+        function canWriteTestCase() {
+          // All roles can CREATE tests; updates/deletes allowed for admins/managers or the creator
+          return isAppAdmin() || isOrgAdmin(organizationId) || isProjectManager(organizationId) || (isAuthenticated() && request.auth.uid == resource.data.createdBy);
+        }
+
+        allow read: if isOrgMember(organizationId) || isAppAdmin() || isOrgAdmin(organizationId);
+
+        // Create: any authenticated org member
+        allow create: if (
+          isOrgMember(organizationId) || isAppAdmin() || isOrgAdmin(organizationId)
+        ) && (
+          // Required minimal fields
+          request.resource.data.tcid is string &&
+          request.resource.data.name is string &&
+          request.resource.data.description is string &&
+          request.resource.data.author is string &&
+          request.resource.data.projectId == projectId &&
+          request.resource.data.organizationId == organizationId &&
+          // Folder ref must exist if provided
+          (
+            request.resource.data.folderId == null ||
+            exists(/databases/$(database)/documents/organizations/$(organizationId)/projects/$(projectId)/folders/$(request.resource.data.folderId))
+          )
+        );
+
+        // Update/Delete: admins/managers or test creator
+        allow update, delete: if canWriteTestCase();
+      }
     }
   }
 }
