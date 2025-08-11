@@ -187,6 +187,7 @@ const Dashboard = () => {
         { label: 'Create Organization', icon: Building, action: () => navigate('/organizations') },
         { label: 'Add User', icon: UserPlus, action: () => navigate('/user-management') },
         { label: 'System Settings', icon: Settings, action: () => navigate('/system-config') },
+        { label: 'Test Types (Global)', icon: Settings, action: () => navigate('/admin/global/test-types') },
         { label: 'View Reports', icon: BarChart3, action: () => navigate('/reports') }
       ];
     } else if (currentUserData?.roles?.includes('ORG_ADMIN')) {

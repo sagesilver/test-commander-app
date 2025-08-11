@@ -54,6 +54,12 @@ service cloud.firestore {
                       (isOrgAdmin(resource.data.organisationId));
     }
 
+    // Global Test Types catalog (read-only for all authenticated users; write App Admin only)
+    match /globalTestTypes/{testTypeId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAppAdmin();
+    }
+
     // Organizations collection
     match /organizations/{organizationId} {
       allow read: if isAppAdmin() || isOrgMember(organizationId);
@@ -119,6 +125,14 @@ service cloud.firestore {
 
         // Update/Delete: admins/managers or test creator
         allow update, delete: if canWriteTestCase();
+      }
+
+      // Org-level Test Types selection (store at /organizations/{organizationId}/testTypes/{testTypeId})
+      match /testTypes/{testTypeId} {
+        // Org members can read their org's enabled test types
+        allow read: if isOrgMember(organizationId) || isAppAdmin() || isOrgAdmin(organizationId);
+        // Only Org Admins (scoped) can enable/disable and override
+        allow create, update, delete: if isOrgAdmin(organizationId);
       }
     }
   }

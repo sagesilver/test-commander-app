@@ -196,6 +196,90 @@ exports.createUserAndInvite = functions.region('australia-southeast1').https.onC
   return response;
 });
 
+// ========== Test Types (Global + Org) ==========
+exports.createGlobalTestType = functions.region('australia-southeast1').https.onCall(async (data, context) => {
+  if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+  const caller = (await db.collection('users').doc(context.auth.uid).get()).data();
+  if (!caller || !Array.isArray(caller.roles) || !caller.roles.includes('APP_ADMIN')) {
+    throw new functions.https.HttpsError('permission-denied', 'APP_ADMIN required');
+  }
+  const { code, name, category = null, description = '', icon, status = 'ACTIVE' } = data || {};
+  if (!code || !name || !icon || !icon.name || !icon.url) {
+    throw new functions.https.HttpsError('invalid-argument', 'code, name, icon.name, icon.url required');
+  }
+  const id = String(code).trim();
+  const ref = db.collection('globalTestTypes').doc(id);
+  const existing = await ref.get();
+  if (existing.exists) throw new functions.https.HttpsError('already-exists', 'code already exists');
+  await ref.set({ code: id, name, category, description, icon, status, createdAt: admin.firestore.FieldValue.serverTimestamp(), createdBy: context.auth.uid, updatedAt: admin.firestore.FieldValue.serverTimestamp(), updatedBy: context.auth.uid });
+  return { success: true, id };
+});
+
+exports.updateGlobalTestType = functions.region('australia-southeast1').https.onCall(async (data, context) => {
+  if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+  const caller = (await db.collection('users').doc(context.auth.uid).get()).data();
+  if (!caller || !Array.isArray(caller.roles) || !caller.roles.includes('APP_ADMIN')) {
+    throw new functions.https.HttpsError('permission-denied', 'APP_ADMIN required');
+  }
+  const { id, updates } = data || {};
+  if (!id || !updates) throw new functions.https.HttpsError('invalid-argument', 'id and updates required');
+  const ref = db.collection('globalTestTypes').doc(String(id));
+  const allowed = ['name', 'category', 'description', 'icon', 'status'];
+  const toSet = Object.fromEntries(Object.entries(updates).filter(([k]) => allowed.includes(k)));
+  toSet.updatedAt = admin.firestore.FieldValue.serverTimestamp();
+  toSet.updatedBy = context.auth.uid;
+  await ref.set(toSet, { merge: true });
+  return { success: true };
+});
+
+exports.archiveGlobalTestType = functions.region('australia-southeast1').https.onCall(async (data, context) => {
+  if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+  const caller = (await db.collection('users').doc(context.auth.uid).get()).data();
+  if (!caller || !Array.isArray(caller.roles) || !caller.roles.includes('APP_ADMIN')) {
+    throw new functions.https.HttpsError('permission-denied', 'APP_ADMIN required');
+  }
+  const { id } = data || {};
+  if (!id) throw new functions.https.HttpsError('invalid-argument', 'id required');
+  await db.collection('globalTestTypes').doc(String(id)).set({ status: 'ARCHIVED', updatedAt: admin.firestore.FieldValue.serverTimestamp(), updatedBy: context.auth.uid }, { merge: true });
+  return { success: true };
+});
+
+exports.setOrgTestTypes = functions.region('australia-southeast1').https.onCall(async (data, context) => {
+  if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+  const { orgId, enabledIds = [], overrides = {} } = data || {};
+  if (!orgId) throw new functions.https.HttpsError('invalid-argument', 'orgId required');
+
+  const callerDoc = await db.collection('users').doc(context.auth.uid).get();
+  const caller = callerDoc.data();
+  const isAppAdmin = Array.isArray(caller?.roles) && caller.roles.includes('APP_ADMIN');
+  const isOrgAdmin = Array.isArray(caller?.roles) && caller.roles.includes('ORG_ADMIN') && caller.organisationId === orgId;
+  if (!isAppAdmin && !isOrgAdmin) throw new functions.https.HttpsError('permission-denied', 'ORG_ADMIN of org or APP_ADMIN required');
+
+  const batch = db.batch();
+  const basePath = `organizations/${orgId}/testTypes`;
+
+  // Read existing
+  const existingSnap = await db.collection(basePath).get();
+  const existingIds = new Set(existingSnap.docs.map((d) => d.id));
+
+  // Upserts
+  for (const id of enabledIds) {
+    const over = overrides[id] || null;
+    const ref = db.collection(basePath).doc(id);
+    batch.set(ref, { enabled: true, override: over || null, updatedAt: admin.firestore.FieldValue.serverTimestamp(), updatedBy: context.auth.uid }, { merge: true });
+    existingIds.delete(id);
+  }
+
+  // Deletes (disable)
+  for (const id of existingIds) {
+    const ref = db.collection(basePath).doc(id);
+    batch.delete(ref);
+  }
+
+  await batch.commit();
+  return { success: true };
+});
+
 
 
 // Cloud Function to handle post-password-reset cleanup and UUID update (fallback)

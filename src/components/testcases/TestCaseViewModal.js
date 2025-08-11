@@ -78,7 +78,7 @@ export default function TestCaseViewModal({ open, testCase, onClose, resolveTags
                   <label className="block text-sm font-medium text-foreground mb-2">Priority</label>
                   <div className="relative w-full">
                     <div className="input-field pr-24"></div>
-                    <span className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs px-2 py-1 rounded-full ${priorityPill(priority)}`}>
+                    <span className={`pointer-events-none absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 text-xs px-2 py-1 rounded-full ${priorityPill(priority)}`}>
                       {priority}
                     </span>
                   </div>

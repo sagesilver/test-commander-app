@@ -13,6 +13,9 @@ import UserManagement from './pages/UserManagement';
 import OrganizationSettings from './pages/OrganizationSettings';
 import SuperUserDashboard from './components/SuperUserDashboard';
 import TestCasesFolder from './pages/TestCasesFolder';
+import AdminGlobalTestTypes from './pages/AdminGlobalTestTypes';
+import OrgTestTypes from './pages/OrgTestTypes';
+import SystemConfig from './pages/SystemConfig';
 import Login from './pages/Login';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -93,6 +96,21 @@ function AppRoutes() {
             <Route path="/super-admin" element={
               <ProtectedRoute>
                 <SuperUserDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/system-config" element={
+              <ProtectedRoute>
+                <SystemConfig />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/global/test-types" element={
+              <ProtectedRoute>
+                <AdminGlobalTestTypes />
+              </ProtectedRoute>
+            } />
+            <Route path="/org/settings/test-types" element={
+              <ProtectedRoute>
+                <OrgTestTypes />
               </ProtectedRoute>
             } />
           </Routes>

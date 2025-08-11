@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Building, Settings, Info, User, CreditCard, Palette, Globe } from 'lucide-react';
+import { Building, Settings, Info, User, CreditCard, Palette, Globe, Settings2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import OrganizationForm from '../components/organizations/OrganizationForm';
 
 const OrganizationSettings = () => {
   const { currentUser, currentUserData, currentOrganization, loading } = useAuth();
+  const navigate = useNavigate();
   const [openEdit, setOpenEdit] = useState(false);
 
   if (loading || !currentUser) {
@@ -58,6 +60,19 @@ const OrganizationSettings = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-card rounded-lg border border-subtle p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Settings2 className="w-5 h-5 text-[rgb(var(--tc-icon))]" />
+              <h3 className="text-lg font-semibold text-foreground">Testing Configuration</h3>
+            </div>
+            <div className="space-y-3 text-sm">
+              <p className="text-menu">Manage which global Test Types are enabled for this organisation.</p>
+              <button className="btn-primary text-sm" onClick={() => navigate('/org/settings/test-types')}>
+                Open Test Types (Org)
+              </button>
+            </div>
+          </div>
+
           <div className="bg-card rounded-lg border border-subtle p-6">
             <div className="flex items-center gap-2 mb-4">
               <Info className="w-5 h-5 text-[rgb(var(--tc-icon))]" />

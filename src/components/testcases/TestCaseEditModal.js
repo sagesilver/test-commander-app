@@ -1,6 +1,10 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { X, Info, ClipboardList, ListChecks, Minus, Plus } from 'lucide-react';
+import { X, Info, ClipboardList, ListChecks, Plus, ListOrdered } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import { testTypeService } from '../../services/testTypeService';
+import TestTypeSelect from './TestTypeSelect';
+import TagMultiSelect from '../TagMultiSelect';
 
 export default function TestCaseEditModal({
   open,
@@ -12,6 +16,36 @@ export default function TestCaseEditModal({
   onSubmit,
   onClose,
 }) {
+  const { currentUserData, currentOrganization } = useAuth();
+  const [orgTypes, setOrgTypes] = useState([]);
+  const [availableTags, setAvailableTags] = useState([
+    { id: 'ui', name: 'UI', color: '#0ea5e9' },
+    { id: 'api', name: 'API', color: '#10b981' },
+    { id: 'regression', name: 'Regression', color: '#f59e0b' },
+    { id: 'security', name: 'Security', color: '#ef4444' },
+  ]);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const orgId = currentOrganization?.id || currentUserData?.organisationId || null;
+      if (!orgId) return;
+      const rows = await testTypeService.getResolvedOrgTestTypes(orgId);
+      if (alive) setOrgTypes(rows.filter((r) => r.enabled));
+    })();
+    return () => { alive = false; };
+  }, [currentUserData, currentOrganization]);
+
+  const addOrUpdateTag = (tag) => {
+    setAvailableTags(prev => {
+      const existing = prev.find(t => t.id === tag.id);
+      if (existing) {
+        return prev.map(t => t.id === tag.id ? tag : t);
+      }
+      return [...prev, tag];
+    });
+  };
+
   if (!open) return null;
 
   return (
@@ -40,7 +74,14 @@ export default function TestCaseEditModal({
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">Test Case Name <span className="text-red-500">*</span></label>
-              <input className="input-field" value={form.name} onChange={(e) => onChange({ name: e.target.value })} required />
+              <textarea
+                rows={1}
+                className="input-field resize-none overflow-hidden"
+                value={form.name}
+                onChange={(e) => onChange({ name: e.target.value })}
+                onInput={(e) => { e.target.style.height = 'auto'; e.target.style.height = `${e.target.scrollHeight}px`; }}
+                required
+              />
             </div>
           </div>
 
@@ -55,19 +96,17 @@ export default function TestCaseEditModal({
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-charcoal mb-2">Test Author <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-foreground mb-2">Test Author <span className="text-red-500">*</span></label>
               <input className="input-field" value={form.author} onChange={(e) => onChange({ author: e.target.value })} required />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">Test Type</label>
-              <select className="input-field" value={form.testType} onChange={(e) => onChange({ testType: e.target.value })}>
-                <option value="">Select Test Type</option>
-                <option value="Functional">Functional</option>
-                <option value="Security">Security</option>
-                <option value="Performance">Performance</option>
-                <option value="Usability">Usability</option>
-                <option value="Integration">Integration</option>
-              </select>
+              <TestTypeSelect
+                options={orgTypes}
+                valueCode={form.testTypeCode || ''}
+                valueLabel={form.testType || ''}
+                onChange={({ code, name }) => onChange({ testTypeCode: code, testType: name })}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">Priority</label>
@@ -77,27 +116,34 @@ export default function TestCaseEditModal({
                 <option value="High">High</option>
               </select>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Overall Test Result</label>
-              <select className="input-field" value={form.overallResult || ''} onChange={(e) => onChange({ overallResult: e.target.value })}>
-                <option value="">Select Result</option>
-                <option value="Passed">Passed</option>
-                <option value="Failed">Failed</option>
-                <option value="In Progress">In Progress</option>
-                <option value="Not Run">Not Run</option>
-              </select>
-            </div>
           </div>
 
           <div>
-            <div className="flex justify-between items-center mb-4">
-              <div className="flex items-center gap-2">
-                <ListChecks className="h-5 w-5 text-[rgb(var(--tc-icon))]" />
-                <h4 className="text-lg font-medium text-foreground">Test Steps</h4>
-              </div>
-              <button type="button" onClick={onAddStep} className="btn-primary text-sm">
-                <Plus className="w-4 h-4 mr-1" /> Add Step
-              </button>
+            <div className="flex items-center gap-2 mb-2">
+              <ClipboardList className="h-5 w-5 text-[rgb(var(--tc-icon))]" />
+              <h4 className="text-lg font-medium text-foreground">Tags</h4>
+            </div>
+            <TagMultiSelect
+              availableTags={availableTags}
+              value={form.tags || []}
+              onChange={(ids) => onChange({ tags: ids })}
+              onAddTag={addOrUpdateTag}
+              label="Tags"
+            />
+          </div>
+
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <ListChecks className="h-5 w-5 text-[rgb(var(--tc-icon))]" />
+              <h4 className="text-lg font-medium text-foreground">Pre-Requisites</h4>
+            </div>
+            <textarea rows={2} className="input-field" placeholder="Any pre-requisites for this test case..." value={form.prerequisites} onChange={(e) => onChange({ prerequisites: e.target.value })} />
+          </div>
+
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <ListOrdered className="h-5 w-5 text-[rgb(var(--tc-icon))]" />
+              <h4 className="text-lg font-medium text-foreground">Test Steps</h4>
             </div>
             <div className="space-y-4">
               {form.testSteps.map((step, index) => (
@@ -119,12 +165,28 @@ export default function TestCaseEditModal({
                       <option value="In Progress">In Progress</option>
                     </select>
                   </div>
+                  <div className="mt-3">
+                    <label className="block text-xs font-medium text-menu mb-1">
+                      Notes/Comments
+                    </label>
+                    <textarea
+                      placeholder="Additional notes..."
+                      rows="1"
+                      className="input-field text-sm"
+                      value={step.notes}
+                      onChange={(e) => onUpdateStep(index, 'notes', e.target.value)}
+                    />
+                  </div>
                 </div>
               ))}
+              <button type="button" onClick={onAddStep} className="btn-secondary w-full">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Test Step
+              </button>
             </div>
           </div>
 
-          <div className="flex space-x-3 pt-4 border-t border-grey-light">
+          <div className="flex space-x-3 pt-4 border-t border-subtle">
             <button type="button" onClick={onClose} className="flex-1 btn-secondary">Cancel</button>
             <button type="submit" className="flex-1 btn-primary">Update Test Case</button>
           </div>

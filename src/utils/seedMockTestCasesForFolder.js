@@ -19,6 +19,7 @@ const templates = [
   {
     name: 'User Login Flow',
     testType: 'Functional',
+    testTypeCode: 'smoke',
     overallResult: 'Not Run',
     prerequisites: 'Valid user account exists',
     steps: [
@@ -31,6 +32,7 @@ const templates = [
   {
     name: 'Password Reset Functionality',
     testType: 'Functional',
+    testTypeCode: 'sanity',
     overallResult: 'Not Run',
     prerequisites: 'User email is registered',
     steps: [
@@ -41,6 +43,7 @@ const templates = [
   {
     name: 'Profile Information Update',
     testType: 'Functional',
+    testTypeCode: 'regression',
     overallResult: 'Not Run',
     prerequisites: 'User is logged in',
     steps: [
@@ -52,6 +55,7 @@ const templates = [
   {
     name: 'Product Search Functionality',
     testType: 'Functional',
+    testTypeCode: 'regression',
     overallResult: 'Not Run',
     prerequisites: 'Catalog has data',
     steps: [
@@ -62,6 +66,7 @@ const templates = [
   {
     name: 'Category Filtering',
     testType: 'Functional',
+    testTypeCode: 'regression',
     overallResult: 'Not Run',
     prerequisites: 'Multiple categories exist',
     steps: [
@@ -103,6 +108,7 @@ export async function seedMockTestCasesForFolder({ organizationId, projectId, fo
       description: `${t.name} - seeded mock for Folder testing` ,
       author: author || 'Seeder',
       testType: t.testType,
+      testTypeCode: t.testTypeCode || '',
       overallResult: t.overallResult,
       prerequisites: t.prerequisites,
       priority: 'Medium',

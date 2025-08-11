@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import DataTable from './table/DataTable';
 import TagPills from './TagPills';
 import { 
@@ -15,6 +15,8 @@ import {
   MoreVertical
 } from 'lucide-react';
 
+import { testTypeService } from '../services/testTypeService';
+
 const TestCasesGrid = ({ 
   testCases, 
   onViewTestCase, 
@@ -26,6 +28,17 @@ const TestCasesGrid = ({
   resolveTags,
   onFilterByTag,
 }) => {
+  const [orgTypes, setOrgTypes] = useState([]);
+  useEffect(() => {
+    (async () => {
+      // Grid view may not know org; best-effort: derive from first row
+      const first = Array.isArray(testCases) && testCases.length > 0 ? testCases[0] : null;
+      const orgId = first?.organizationId || null;
+      if (!orgId) return;
+      const list = await testTypeService.getResolvedOrgTestTypes(orgId);
+      setOrgTypes(list);
+    })();
+  }, [testCases]);
   // Prepare data for MUI DataGrid with unique IDs
   const gridData = useMemo(() => {
     if (!testCases || !Array.isArray(testCases)) {
@@ -43,6 +56,7 @@ const TestCasesGrid = ({
       name: testCase.name || '',
       author: testCase.author || '',
       testType: testCase.testType || '',
+      testTypeCode: testCase.testTypeCode || '',
       priority: testCase.priority || 'Medium',
       overallResult: testCase.overallResult || 'Not Run',
       stepsCount: Array.isArray(testCase.testSteps) ? testCase.testSteps.length : 0,
@@ -63,7 +77,12 @@ const TestCasesGrid = ({
       accessorKey: 'tcid',
       size: 150,
       cell: ({ getValue }) => (
-        <span className="inline-flex items-center px-2 py-1 rounded-full text-sm font-medium bg-[rgb(var(--tc-icon))]/20 text-[rgb(var(--tc-icon))]">{getValue()}</span>
+        <span
+          className="inline-flex items-center justify-center min-w-[112px] px-2 py-0.5 rounded-md text-xs font-medium bg-[rgb(var(--tc-icon))]/20 text-[rgb(var(--tc-icon))] text-center"
+          title={getValue()}
+        >
+          {getValue()}
+        </span>
       ),
       enableSorting: true,
       filterType: 'text',
@@ -112,23 +131,37 @@ const TestCasesGrid = ({
       id: 'testType',
       header: 'Test Type',
       accessorKey: 'testType',
-      size: 140,
-      cell: ({ getValue }) => {
-        const styles = {
-          Functional: 'text-[rgb(var(--tc-contrast))] bg-white/5',
-          Security: 'text-red-400 bg-red-900/20',
-          Performance: 'text-purple-300 bg-purple-900/20',
-          Usability: 'text-green-400 bg-green-900/20',
-          Integration: 'text-orange-300 bg-orange-900/20',
-        };
+      size: 180,
+      cell: ({ row }) => {
+        const code = row.original.testTypeCode;
+        const found = orgTypes.find((t) => t.id === code);
+        const name = found?.name || row.getValue('testType');
+        const icon = found?.icon || null;
         return (
-          <span className={`inline-flex items-center h-7 px-2 rounded-full text-sm font-medium ${styles[getValue()] || 'text-menu bg-white/5'}`}>
-            {getValue()}
+          <span className="inline-flex items-center h-7 px-2 rounded-full text-sm font-medium text-foreground bg-white/5" title={code || ''}>
+            {icon?.url && (
+              <span
+                className="mr-1"
+                style={{
+                  WebkitMaskImage: `url(${icon.url})`,
+                  maskImage: `url(${icon.url})`,
+                  WebkitMaskRepeat: 'no-repeat',
+                  maskRepeat: 'no-repeat',
+                  WebkitMaskSize: 'contain',
+                  maskSize: 'contain',
+                  backgroundColor: icon.colorDark || '#60a5fa',
+                  width: '16px',
+                  height: '16px',
+                  display: 'inline-block',
+                }}
+              />
+            )}
+            {name}
           </span>
         );
       },
       enableSorting: true,
-      filterType: 'select',
+      filterType: 'text',
     },
     {
       id: 'priority',

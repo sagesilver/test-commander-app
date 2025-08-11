@@ -25,6 +25,31 @@ export const testCaseService = {
     return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
   },
 
+  async getAllTestCases(organizationId) {
+    assert(organizationId, 'organizationId required');
+    
+    // Get all projects for the organization
+    const projectsRef = collection(db, 'organizations', organizationId, 'projects');
+    const projectsSnap = await getDocs(projectsRef);
+    const projects = projectsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    
+    // Get all test cases from all projects
+    const allTestCases = [];
+    for (const project of projects) {
+      const testCasesRef = collection(db, 'organizations', organizationId, 'projects', project.id, 'testCases');
+      const testCasesSnap = await getDocs(testCasesRef);
+      const testCases = testCasesSnap.docs.map(d => ({ 
+        id: d.id, 
+        ...d.data(),
+        projectId: project.id,
+        projectName: project.name || project.projectName
+      }));
+      allTestCases.push(...testCases);
+    }
+    
+    return allTestCases;
+  },
+
   async createTestCase(organizationId, projectId, payload) {
     assert(organizationId, 'organizationId required');
     assert(projectId, 'projectId required');
@@ -41,13 +66,24 @@ export const testCaseService = {
 
   async updateTestCase(organizationId, projectId, testCaseId, updates) {
     assert(organizationId && projectId && testCaseId, 'ids required');
+    assert(updates && typeof updates === 'object', 'updates required');
+    
     const ref = doc(db, 'organizations', organizationId, 'projects', projectId, 'testCases', testCaseId);
     await updateDoc(ref, updates || {});
     return { success: true };
   },
 
+  async moveTestCase(organizationId, projectId, testCaseId, targetFolderId) {
+    assert(organizationId && projectId && testCaseId !== undefined, 'ids required');
+    const updates = { folderId: targetFolderId || null };
+    const ref = doc(db, 'organizations', organizationId, 'projects', projectId, 'testCases', testCaseId);
+    await updateDoc(ref, updates);
+    return { success: true };
+  },
+
   async deleteTestCase(organizationId, projectId, testCaseId) {
     assert(organizationId && projectId && testCaseId, 'ids required');
+    
     const ref = doc(db, 'organizations', organizationId, 'projects', projectId, 'testCases', testCaseId);
     await deleteDoc(ref);
     return { success: true };

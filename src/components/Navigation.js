@@ -35,7 +35,7 @@ const Navigation = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
-  const [expandedSections, setExpandedSections] = useState(['main']);
+  const [expandedSections, setExpandedSections] = useState(['main','admin','analyst','tester','coordinator','support']);
   const location = useLocation();
   const { currentUser, currentUserData, currentOrganization, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();

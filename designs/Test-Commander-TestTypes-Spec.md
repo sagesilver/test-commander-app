@@ -474,6 +474,77 @@ service firebase.storage {
 * [ ] Icons render in both **light** and **dark** modes with accessible contrast (per style guide) .
 * [ ] No client over‑fetching of other orgs’ data.
 
+Larger List of test Types
+Here’s a **comprehensive list of test types** you can support in the Test Commander application.
+It combines industry-standard categories with flexibility for your tagging/filtering system, so they can be used for classification, reporting, and regression planning.
+
+## **1. Functional Testing**
+
+* **Smoke Testing** – Basic build verification.
+* **Sanity Testing** – Quick checks on specific functionality.
+* **Regression Testing** – Verification after changes.
+* **Integration Testing** – Interactions between components/modules.
+* **System Testing** – End-to-end validation.
+* **User Acceptance Testing (UAT)** – Final business validation.
+* **End-to-End (E2E) Testing** – Full workflow coverage.
+
 ---
 
-**End of spec.**
+## **2. Non-Functional Testing**
+
+* **Performance Testing** – Response times, throughput.
+* **Load Testing** – Expected user load.
+* **Stress Testing** – Beyond capacity limits.
+* **Scalability Testing** – Horizontal/vertical growth handling.
+* **Reliability Testing** – Stability over time.
+* **Security Testing** – Vulnerability & penetration testing.
+* **Usability Testing** – User experience and accessibility.
+* **Accessibility Testing** – WCAG, ADA compliance.
+* **Compatibility Testing** – OS, browser, device combinations.
+* **Localization/Internationalization Testing** – Language, currency, formatting.
+* **Recovery/Failover Testing** – Disaster recovery validation.
+* **Install/Uninstall Testing** – Deployment processes.
+
+---
+
+## **3. Specialized / Domain-Specific Testing**
+
+* **API Testing** – REST/GraphQL validation.
+* **Database Testing** – Schema, data integrity, performance.
+* **Data Migration Testing** – Legacy → new system validation.
+* **Configuration Testing** – Environment & settings combinations.
+* **Compliance Testing** – Industry standards (e.g., HIPAA, PCI-DSS, ISO).
+* **Mobile Testing** – Native, hybrid, responsive web.
+* **Cross-Browser Testing** – Rendering, behaviour across browsers.
+* **Hardware/Embedded Testing** – Firmware, devices, sensors.
+
+---
+
+## **4. Automation Scope Types**
+
+* **Automated Functional Tests** – Playwright, Selenium, Cypress.
+* **Automated Regression Packs** – Scheduled or triggered runs.
+* **Automated API Suites** – Postman/Newman, REST Assured.
+* **CI/CD Pipeline Tests** – Triggered in build pipelines.
+
+---
+
+## **5. Maintenance & Exploratory**
+
+* **Exploratory Testing** – Unscripted, creative exploration.
+* **Ad-hoc Testing** – No documentation, quick checks.
+* **Confirmation/Retesting** – Verify defect fixes.
+* **Session-Based Testing** – Time-boxed exploratory with charters.
+* **Maintenance Testing** – After environment/config updates.
+
+---
+
+## **6. User & Business-Focused**
+
+* **Beta Testing** – Pre-release user group.
+* **Pilot Testing** – Limited scope rollout.
+* **Operational Readiness Testing (ORT)** – Production readiness checks.
+* **Business Process Testing (BPT)** – End-to-end process alignment.
+
+
+

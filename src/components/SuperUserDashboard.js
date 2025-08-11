@@ -141,7 +141,8 @@ const SuperUserDashboard = () => {
         <h1 className="text-3xl font-bold text-foreground">Super User Dashboard</h1>
         <p className="text-muted mt-2">Welcome, {currentUserData.name}</p>
       </div>
-
+      
+      {/* Removed System Config: Test Types panel per requirement */}
       {/* Alert Messages */}
       {alert.show && (
         <div className={`p-4 rounded-lg mb-6 flex items-center space-x-2 ${

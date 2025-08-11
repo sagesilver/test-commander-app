@@ -7,6 +7,7 @@ import React, { useMemo, useState } from 'react';
  * - value: string[] (array of tag ids)
  * - onChange: (ids: string[]) => void
  * - onAddTag?: (tag: { id, name, color }) => void (optional, mock add)
+ * - label?: string (omit/empty to hide)
  */
 export default function TagMultiSelect({
   availableTags = [],
@@ -37,7 +38,9 @@ export default function TagMultiSelect({
 
   return (
     <div>
-      <label className="block text-sm font-medium text-foreground mb-2">{label}</label>
+      {Boolean(label) && (
+        <label className="block text-sm font-medium text-foreground mb-2">{label}</label>
+      )}
       <div className="grid grid-cols-1 gap-2">
         <div className="flex flex-wrap gap-2 p-2 rounded-lg border border-subtle bg-surface-muted">
           {availableTags.length === 0 && (
