@@ -40,10 +40,12 @@ import { useAuth } from '../contexts/AuthContext';
 import { testTypeService } from '../services/testTypeService';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { testCaseService } from '../services/testCaseService';
+import { useToast } from '../components/Toast';
 import { projectsService } from '../services/projectsService';
 
 const TestCases = () => {
-  const { currentUserData, currentOrganization } = useAuth();
+  const { currentUserData, currentOrganization, getUsers } = useAuth();
+  const { push } = useToast() || { push: () => {} };
   const navigate = useNavigate();
   const location = useLocation();
   const [searchTerm, setSearchTerm] = useState('');
@@ -70,6 +72,8 @@ const TestCases = () => {
   // Projects
   const [projects, setProjects] = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState(null);
+  // Organization users for Test Author dropdown
+  const [organizationUsers, setOrganizationUsers] = useState([]);
   
   // Form state for new test case
   const [newTestCaseForm, setNewTestCaseForm] = useState({
@@ -95,6 +99,7 @@ const TestCases = () => {
       loadTestCases();
       loadOrgTestTypes();
       loadProjects();
+      loadOrganizationUsers();
     }
   }, [currentOrganization?.id, currentUserData]);
 
@@ -111,7 +116,7 @@ const TestCases = () => {
     if (currentUserData) {
       setNewTestCaseForm(prev => ({
         ...prev,
-        author: currentUserData?.displayName || currentUserData?.email || ''
+        author: currentUserData?.name || currentUserData?.displayName || currentUserData?.email || ''
       }));
     }
   }, [currentUserData]);
@@ -153,6 +158,15 @@ const TestCases = () => {
       console.error('Error loading projects:', error);
       setProjects([]);
       setSelectedProjectId(null);
+    }
+  };
+
+  const loadOrganizationUsers = async () => {
+    try {
+      const users = await getUsers(currentOrganization.id);
+      setOrganizationUsers(users);
+    } catch (error) {
+      console.error('Error loading organization users:', error);
     }
   };
 
@@ -260,18 +274,26 @@ const TestCases = () => {
         window.alert('Cannot create test case. No project is selected. Ask your Organization Admin or Project Manager to create a project and assign you.');
         return;
       }
-      await testCaseService.createTestCase(currentOrganization.id, selectedProjectId, {
+      const makeTcid = (name) => {
+        const base = (name || 'TC').toString().toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 24);
+        const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
+        return `${base}-${rand}`;
+      };
+      const payload = {
         ...formData,
-        author: currentUserData?.displayName || currentUserData?.email,
+        tcid: (formData?.tcid || '').trim() || makeTcid(formData?.name),
+        author: currentUserData?.name || currentUserData?.displayName || currentUserData?.email,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
-      });
+      };
+      await testCaseService.createTestCase(currentOrganization.id, selectedProjectId, payload);
+      push({ variant: 'success', message: `Test Case <${payload.tcid}: ${payload.name}> was successfully added to the database` });
       setShowNewTestCaseModal(false);
       setNewTestCaseForm({
         tcid: '',
         name: '',
         description: '',
-        author: currentUserData?.displayName || currentUserData?.email || '',
+        author: currentUserData?.name || currentUserData?.displayName || currentUserData?.email || '',
         testType: '',
         testTypeCode: '',
         priority: 'Medium',
@@ -296,12 +318,14 @@ const TestCases = () => {
         ...formData,
         updatedAt: new Date().toISOString()
       });
+      push({ variant: 'success', message: 'Test case updated successfully' });
       setShowEditTestCaseModal(false);
       setSelectedTestCase(null);
       setEditTestCaseForm({});
       await loadTestCases();
     } catch (error) {
       console.error('Error updating test case:', error);
+      push({ variant: 'error', message: 'Failed to update test case' });
     }
   };
 
@@ -473,7 +497,7 @@ const TestCases = () => {
                   
                   <div className="flex-1">
                     <h4 className="font-medium text-foreground">{testCase.name}</h4>
-                    <p className="text-sm text-muted line-clamp-1">{testCase.description}</p>
+                     <p className="text-sm text-muted line-clamp-1">{(() => { const d=document.createElement('div'); d.innerHTML=testCase.description||''; return d.textContent||d.innerText||'';})()}</p>
                   </div>
                 </div>
 
@@ -542,12 +566,21 @@ const TestCases = () => {
     
     // Search filter
     if (searchTerm) {
-      filtered = filtered.filter(tc => 
-        tc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        tc.tcid.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        tc.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        tc.author.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      const sanitize = (html) => {
+        const tmp = document.createElement('div');
+        tmp.innerHTML = html || '';
+        return (tmp.textContent || tmp.innerText || '').toLowerCase();
+      };
+      const q = searchTerm.toLowerCase();
+      filtered = filtered.filter(tc => {
+        const desc = sanitize(tc.description);
+        return (
+          tc.name.toLowerCase().includes(q) ||
+          tc.tcid.toLowerCase().includes(q) ||
+          desc.includes(q) ||
+          tc.author.toLowerCase().includes(q)
+        );
+      });
     }
     
     // Status filter
@@ -633,6 +666,7 @@ const TestCases = () => {
               onEditTestCase={handleEditTestCase}
               onDuplicateTestCase={handleDuplicateTestCase}
               onDeleteTestCase={handleDeleteTestCase}
+              organizationUsers={organizationUsers}
             />
           ) : (
             <TestCasesGrid
@@ -645,6 +679,7 @@ const TestCases = () => {
               onBulkDelete={handleBulkDelete}
               resolveTags={resolveTags}
               onFilterByTag={(id) => toggleFilterTag(id)}
+              organizationUsers={organizationUsers}
             />
           )}
         </div>
@@ -661,6 +696,7 @@ const TestCases = () => {
           onUpdateStep={handleNewTestCaseUpdateStep}
           onSubmit={handleNewTestCaseSubmit}
           onClose={() => setShowNewTestCaseModal(false)}
+          projectMembers={organizationUsers}
         />
       )}
 
@@ -673,12 +709,13 @@ const TestCases = () => {
           onRemoveStep={handleEditTestCaseRemoveStep}
           onUpdateStep={handleEditTestCaseUpdateStep}
           onSubmit={handleEditTestCaseSubmit}
-          onClose={() => {
-            setShowEditTestCaseModal(false);
-            setSelectedTestCase(null);
-            setEditTestCaseForm({});
-          }}
-        />
+                      onClose={() => {
+              setShowEditTestCaseModal(false);
+              setSelectedTestCase(null);
+              setEditTestCaseForm({});
+            }}
+            projectMembers={organizationUsers}
+          />
       )}
 
       {showViewTestCaseModal && selectedTestCase && (
@@ -694,6 +731,7 @@ const TestCases = () => {
             setShowEditTestCaseModal(true);
           }}
           resolveTags={resolveTags}
+          organizationUsers={organizationUsers}
         />
       )}
     </div>

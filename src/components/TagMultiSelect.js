@@ -66,14 +66,15 @@ export default function TagMultiSelect({
           })}
         </div>
 
-        {/* Inline add new tag (mock) */}
+        {/* Inline add new tag */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-2 items-center">
           <input
             className="input-field md:col-span-3"
             type="text"
-            placeholder="Add new tag (mock)"
+            placeholder="Add new tag"
             value={newTagName}
             onChange={(e) => setNewTagName(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && addTag()}
           />
           <input
             className="input-field md:col-span-1"

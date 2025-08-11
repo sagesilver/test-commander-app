@@ -22,7 +22,7 @@ export const testCaseService = {
     const colRef = collection(db, 'organizations', organizationId, 'projects', projectId, 'testCases');
     const q = query(colRef, where('folderId', '==', folderId === undefined ? null : folderId));
     const snap = await getDocs(q);
-    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    return snap.docs.map((d) => ({ id: d.id, ...d.data(), projectId }));
   },
 
   async getAllTestCases(organizationId) {
@@ -56,7 +56,7 @@ export const testCaseService = {
     assert(payload && typeof payload === 'object', 'payload required');
     assert(typeof payload.tcid === 'string' && payload.tcid.trim().length > 0, 'tcid required');
     assert(typeof payload.name === 'string' && payload.name.trim().length > 0, 'name required');
-    assert(typeof payload.description === 'string' && payload.description.trim().length > 0, 'description required');
+    assert(typeof payload.description === 'string' && (payload.description.replace(/<[^>]*>/g, '').trim().length > 0), 'description required');
     assert(typeof payload.author === 'string' && payload.author.trim().length > 0, 'author required');
 
     const callable = httpsCallable(functions, 'createTestCaseWithUniqueTcid');

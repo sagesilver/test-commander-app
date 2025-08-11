@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ChevronDown, ChevronRight, Folder as FolderIcon, Edit, Eye, Copy, Trash2, ListChecks } from 'lucide-react';
+import { ChevronDown, ChevronRight, ChevronUp, Folder as FolderIcon, Edit, Eye, Copy, Trash2, ListChecks } from 'lucide-react';
 import { folderService } from '../../services/folderService';
 import { testCaseService } from '../../services/testCaseService';
 import { testTypeService } from '../../services/testTypeService';
+import { resolveUserName } from '../../utils/textUtils';
 import ColoredIcon from './ColoredIcon';
 import TagPills from '../TagPills';
 
@@ -20,11 +21,20 @@ export default function TestCasesListView({
   onEditTestCase,
   onDuplicateTestCase,
   onDeleteTestCase,
+  organizationUsers = [],
 }) {
   const [expanded, setExpanded] = useState(new Set());
   const [projectChildren, setProjectChildren] = useState(new Map()); // projectId -> root nodes
   const [folderChildren, setFolderChildren] = useState(new Map()); // key: `${projectId}:${folderId}` -> nodes
   const [busy, setBusy] = useState(false);
+  
+  // util to strip HTML for previews/search
+  function stripHtml(html) {
+    if (!html) return '';
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || '';
+  }
   const [orgTypes, setOrgTypes] = useState([]);
   const [expandedRows, setExpandedRows] = useState(new Set()); // tc.id -> expanded description
 
@@ -33,7 +43,8 @@ export default function TestCasesListView({
   const passesFilters = (tc) => {
     if (searchTerm) {
       const q = searchTerm.toLowerCase();
-      const text = `${tc.tcid} ${tc.name} ${tc.description || ''} ${tc.author || ''}`.toLowerCase();
+      const resolvedAuthor = resolveUserName(tc.author, organizationUsers);
+      const text = `${tc.tcid} ${tc.name} ${stripHtml(tc.description || '')} ${resolvedAuthor}`.toLowerCase();
       if (!text.includes(q)) return false;
     }
     if (filterStatus !== 'all' && (tc.overallResult || 'Not Run') !== filterStatus) return false;
@@ -128,27 +139,72 @@ export default function TestCasesListView({
     }
   };
 
-  // Deterministic mock run history of last 10 runs: 'pass' | 'fail' | 'none'
+  // Deterministic mock run history of last 20 runs with seeded PRNG
   const mockRunHistory = (tc) => {
-    const key = String(tc?.id || tc?.tcid || '')
-      .split('')
-      .reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
-    const states = ['pass', 'fail', 'none'];
-    return Array.from({ length: 10 }, (_, i) => states[(key + i * 7) % 3]);
+    const seedStr = String(tc?.id || tc?.tcid || 'tc');
+    // Simple string hash -> 32-bit seed
+    let h = 1779033703 ^ seedStr.length;
+    for (let i = 0; i < seedStr.length; i += 1) {
+      h = Math.imul(h ^ seedStr.charCodeAt(i), 3432918353);
+      h = (h << 13) | (h >>> 19);
+    }
+    h = Math.imul(h ^ (h >>> 16), 2246822507);
+    h = Math.imul(h ^ (h >>> 13), 3266489909);
+    h ^= h >>> 16;
+    // Mulberry32
+    let t = h >>> 0;
+    const rand = () => {
+      t += 0x6D2B79F5;
+      let r = t;
+      r = Math.imul(r ^ (r >>> 15), r | 1);
+      r ^= r + Math.imul(r ^ (r >>> 7), r | 61);
+      return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+    };
+    // Randomise number of visible runs per test (min 4, max 20)
+    const length = 4 + Math.floor(rand() * 17); // 4..20
+    const out = [];
+    for (let i = 0; i < length; i += 1) {
+      const r = rand();
+      // Skew to look realistic: mostly pass, occasional none/fail
+      if (r < 0.62) out.push('pass');
+      else if (r < 0.82) out.push('none');
+      else out.push('fail');
+    }
+    return out;
   };
 
   const RunHistoryViz = ({ history = [] }) => {
-    const items = history.slice(-10); // ensure max 10
+    const items = history.slice(-20);
+    const barH = 12; // px (h-3)
+    const topGreen = `calc(50% - ${barH * 0.75}px)`; // 75% above axis
+    const topRed = `calc(50% - ${barH * 0.25}px)`; // 75% below axis
     return (
-      <div className="flex flex-col items-stretch justify-center gap-1 w-6 select-none" aria-label="Run history (latest at bottom)">
+      <div
+        className="relative h-4 flex items-stretch gap-1 select-none"
+        aria-label="Run history (latest at right)"
+        title="Run History: Latest Run at Right"
+      >
+        <div className="absolute left-0 right-0 top-1/2 h-px bg-white/40" />
         {items.map((s, i) => (
-          s === 'pass' ? (
-            <span key={i} className="self-start w-1.5 h-3 rounded bg-emerald-500" />
-          ) : s === 'fail' ? (
-            <span key={i} className="self-end w-1.5 h-3 rounded bg-red-500" />
-          ) : (
-            <span key={i} className="self-center w-1.5 h-1.5 rounded-full bg-white/40" />
-          )
+          <div key={i} className="relative w-1.5 h-4">
+            {s === 'pass' && (
+              <span
+                className="absolute left-1/2 -translate-x-1/2 w-1.5 rounded bg-emerald-500"
+                style={{ top: topGreen, height: `${barH}px` }}
+              />
+            )}
+            {s === 'fail' && (
+              <span
+                className="absolute left-1/2 -translate-x-1/2 w-1.5 rounded bg-red-500"
+                style={{ top: topRed, height: `${barH}px` }}
+              />
+            )}
+            {s === 'none' && (
+              <span
+                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-white/60"
+              />
+            )}
+          </div>
         ))}
       </div>
     );
@@ -224,7 +280,7 @@ export default function TestCasesListView({
                 <TagPills tags={tagsResolved} size="sm" />
               </div>
               {expanded && (
-                <div className="mt-2 text-sm text-muted whitespace-pre-wrap">{tc.description || '—'}</div>
+                <div className="mt-2 text-sm text-muted whitespace-pre-wrap">{stripHtml(tc.description || '') || '—'}</div>
               )}
             </div>
           </div>
@@ -238,7 +294,7 @@ export default function TestCasesListView({
                 className="p-1 hover:bg-white/10 rounded text-menu hover:text-foreground"
                 title={expanded ? 'Hide description' : 'Show description'}
               >
-                {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
               </button>
               <button onClick={() => onViewTestCase?.(tc)} className="p-1 hover:bg-white/10 rounded text-menu hover:text-foreground" title="View">
                 <Eye className="h-4 w-4" />

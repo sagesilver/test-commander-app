@@ -154,6 +154,10 @@ export const getUserById = async (userId) => {
 
     return null;
   } catch (error) {
+    // Suppress noisy permission errors for non-admin users
+    if (error && (error.code === 'permission-denied' || /insufficient permissions/i.test(String(error)))) {
+      return null;
+    }
     console.error("Error getting user:", error);
     throw error;
   }

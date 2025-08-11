@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useToast } from './Toast';
 import DataTable from './table/DataTable';
 import TagPills from './TagPills';
+import { resolveUserName } from '../utils/textUtils';
 import { 
   Search, 
   Edit,
@@ -27,8 +29,10 @@ const TestCasesGrid = ({
   onBulkDelete,
   resolveTags,
   onFilterByTag,
+  organizationUsers = [],
 }) => {
   const [orgTypes, setOrgTypes] = useState([]);
+  const { push } = useToast() || { push: () => {} };
   useEffect(() => {
     (async () => {
       // Grid view may not know org; best-effort: derive from first row
@@ -54,7 +58,7 @@ const TestCasesGrid = ({
       id: index, // MUI DataGrid requires unique id field
       tcid: testCase.tcid || '',
       name: testCase.name || '',
-      author: testCase.author || '',
+      author: resolveUserName(testCase.author, organizationUsers),
       testType: testCase.testType || '',
       testTypeCode: testCase.testTypeCode || '',
       priority: testCase.priority || 'Medium',
@@ -311,6 +315,12 @@ const TestCasesGrid = ({
             pageSizeOptions={[10, 20, 50]}
             emptyMessage="No test cases"
             className="text-foreground"
+            onRowAddSuccess={(row) => {
+              const tc = row?.originalData || {};
+              if (tc?.tcid && tc?.name) {
+                push({ variant: 'success', message: `Test Case <${tc.tcid}: ${tc.name}> was successfully added to the database` });
+              }
+            }}
           />
         </div>
       </div>

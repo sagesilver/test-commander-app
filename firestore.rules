@@ -42,9 +42,11 @@ service cloud.firestore {
 
     // Users collection
     match /users/{userId} {
-      allow read: if isAppAdmin() || 
+      // Org members can read user profiles within their organization (to support author pickers, mentions, etc.)
+      allow read: if isAppAdmin() ||
                     (isAuthenticated() && (request.auth.uid == userId || resource.data.email == request.auth.token.email)) ||
-                    (isOrgAdmin(resource.data.organisationId));
+                    (isOrgAdmin(resource.data.organisationId)) ||
+                    (isOrgMember(resource.data.organisationId));
       allow create: if isAppAdmin() || 
                       (isOrgAdmin(request.resource.data.organisationId));
       allow update: if isAppAdmin() || 
@@ -91,18 +93,14 @@ service cloud.firestore {
 
       // Folders subcollection
       match /projects/{projectId}/folders/{folderId} {
-        // All org members can read and manage folders per spec
         allow read: if isOrgMember(organizationId) || isAppAdmin() || isOrgAdmin(organizationId);
-        allow create, update, delete: if isOrgMember(organizationId) || isAppAdmin() || isOrgAdmin(organizationId);
+        // Create/Update: org members; Delete: admins only
+        allow create, update: if isOrgMember(organizationId) || isAppAdmin() || isOrgAdmin(organizationId);
+        allow delete: if isAppAdmin() || isOrgAdmin(organizationId);
       }
 
       // Test cases subcollection
       match /projects/{projectId}/testCases/{testCaseId} {
-        function canWriteTestCase() {
-          // All roles can CREATE tests; updates/deletes allowed for admins/managers or the creator
-          return isAppAdmin() || isOrgAdmin(organizationId) || isProjectManager(organizationId) || (isAuthenticated() && request.auth.uid == resource.data.createdBy);
-        }
-
         allow read: if isOrgMember(organizationId) || isAppAdmin() || isOrgAdmin(organizationId);
 
         // Create: any authenticated org member
@@ -123,8 +121,11 @@ service cloud.firestore {
           )
         );
 
-        // Update/Delete: admins/managers or test creator
-        allow update, delete: if canWriteTestCase();
+        // Update: admins, project managers, or creator can update
+        allow update: if isAppAdmin() || isOrgAdmin(organizationId) || isProjectManager(organizationId) || (isAuthenticated() && request.auth.uid == resource.data.createdBy);
+
+        // Delete: admins only (project managers cannot delete)
+        allow delete: if isAppAdmin() || isOrgAdmin(organizationId);
       }
 
       // Org-level Test Types selection (store at /organizations/{organizationId}/testTypes/{testTypeId})

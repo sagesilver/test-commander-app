@@ -19,16 +19,20 @@ const OrganizationList = () => {
   const [showOnlyActive, setShowOnlyActive] = useState(true);
 
   useEffect(() => {
+    console.log('OrganizationList: showOnlyActive changed to:', showOnlyActive);
     loadOrganizations();
   }, [showOnlyActive]);
 
   const loadOrganizations = async () => {
     try {
       setLoading(true);
+      console.log('OrganizationList: Loading organizations, showOnlyActive:', showOnlyActive);
       // Load organizations directly from Firestore database
       let orgs = await organizationService.getAllOrganizations();
+      console.log('OrganizationList: Raw organizations loaded:', orgs.length);
       if (showOnlyActive) {
         orgs = orgs.filter((o) => o.isActive !== false);
+        console.log('OrganizationList: Filtered to active only:', orgs.length);
       }
       setOrganizations(orgs);
       
@@ -333,12 +337,15 @@ const OrganizationList = () => {
               </button>
             </div>
             <label className="flex items-center ml-3 select-none" title="Show only Active organizations">
-              <input
-                type="checkbox"
-                className="sr-only"
-                checked={showOnlyActive}
-                onChange={(e) => setShowOnlyActive(e.target.checked)}
-              />
+                          <input
+              type="checkbox"
+              className="sr-only"
+              checked={showOnlyActive}
+              onChange={(e) => {
+                console.log('OrganizationList: Toggle changed to:', e.target.checked);
+                setShowOnlyActive(e.target.checked);
+              }}
+            />
               <span className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${showOnlyActive ? 'bg-green-600' : 'bg-white/10 border border-subtle'}`}>
                 <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${showOnlyActive ? 'translate-x-6' : 'translate-x-1'}`}></span>
               </span>

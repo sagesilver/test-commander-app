@@ -142,10 +142,8 @@ export const projectsService = {
     // Org Admin or Org Member scope
     const constraints = [];
     const isAdmin = hasAppAdminRole(currentUserData) || hasOrgAdminRoleFor(currentUserData, orgId);
-    if (!isAdmin && activeOnly) {
+    if (activeOnly) {
       constraints.push(where('status', '==', 'ACTIVE'));
-    } else if (activeOnly) {
-      // Admins may still prefer ACTIVE only; leave filter optional. Keeping it off avoids index quirks.
     }
     const q = query(collection(db, 'organizations', orgId, 'projects'), ...constraints);
     const snap = await getDocs(q);
@@ -177,11 +175,16 @@ export const projectsService = {
     const all = [];
     for (const orgDoc of orgsSnap.docs) {
       const orgId = orgDoc.id;
+      const orgData = orgDoc.data();
       const constraints = [];
       if (activeOnly) constraints.push(where('status', '==', 'ACTIVE'));
       const projSnap = await getDocs(query(collection(db, 'organizations', orgId, 'projects'), ...constraints));
       for (const d of projSnap.docs) {
-        all.push({ id: d.id, ...d.data() });
+        all.push({ 
+          id: d.id, 
+          ...d.data(),
+          organizationName: orgData.name || 'Unknown Organization'
+        });
       }
     }
     // Enrich with createdByName

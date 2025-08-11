@@ -3,6 +3,9 @@ import { Info, ClipboardList, ListChecks, Plus, ListOrdered } from 'lucide-react
 import { testTypeService } from '../../services/testTypeService';
 import TestTypeSelect from './TestTypeSelect';
 import TagMultiSelect from '../TagMultiSelect';
+import TagPills from '../TagPills';
+import RichTextEditor from '../common/RichTextEditor';
+import RichTextViewer from '../common/RichTextViewer';
 
 export default function TestCaseForm({
   organizationId,
@@ -16,6 +19,7 @@ export default function TestCaseForm({
   onCancel,
   submitLabel = 'Create Test Case',
   showActions = true,
+  projectMembers = [],
 }) {
   const isReadOnly = mode === 'view';
   const [orgTypes, setOrgTypes] = useState([]);
@@ -23,15 +27,20 @@ export default function TestCaseForm({
     { id: 'ui', name: 'UI', color: '#0ea5e9' },
     { id: 'api', name: 'API', color: '#10b981' },
     { id: 'regression', name: 'Regression', color: '#f59e0b' },
-    { id: 'security', name: 'Security', color: '#ef4444' },
+    { id: 'security', color: '#ef4444' },
   ]);
+
+  // Debug logging
+  console.log('TestCaseForm render:', { mode, form: form?.tcid, author: form?.author, projectMembers: projectMembers?.length });
 
   useEffect(() => {
     let alive = true;
     (async () => {
       if (!organizationId) return;
-      const rows = await testTypeService.getResolvedOrgTestTypes(organizationId);
-      if (alive) setOrgTypes(rows.filter((r) => r.enabled));
+      const types = await testTypeService.getResolvedOrgTestTypes(organizationId);
+      if (alive) {
+        setOrgTypes(types.filter((r) => r.enabled));
+      }
     })();
     return () => { alive = false; };
   }, [organizationId]);
@@ -54,11 +63,11 @@ export default function TestCaseForm({
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-foreground mb-2">Test Case ID (TCID) <span className="text-red-500">*</span></label>
+          <label className="block text-sm font-medium text-foreground mb-2">Test Case ID (TCID)</label>
           {isReadOnly ? (
             <div className="input-field bg-white/5 cursor-default select-text">{form.tcid}</div>
           ) : (
-            <input className="input-field" value={form.tcid} onChange={(e) => onChange({ tcid: e.target.value })} required />
+            <input className="input-field" value={form.tcid} onChange={(e) => onChange({ tcid: e.target.value })} placeholder="Leave blank to auto-generate" />
           )}
         </div>
         <div>
@@ -85,9 +94,9 @@ export default function TestCaseForm({
         </div>
         <label className="block text-sm font-medium text-foreground mb-2">Description/Objective <span className="text-red-500">*</span></label>
         {isReadOnly ? (
-          <div className="input-field bg-white/5 cursor-default select-text whitespace-pre-wrap">{form.description}</div>
+          <RichTextViewer html={form.description || ''} />
         ) : (
-          <textarea rows={3} className="input-field" value={form.description} onChange={(e) => onChange({ description: e.target.value })} required />
+          <RichTextEditor value={form.description || ''} onChange={(html) => onChange({ description: html })} />
         )}
       </div>
 
@@ -97,7 +106,28 @@ export default function TestCaseForm({
           {isReadOnly ? (
             <div className="input-field bg-white/5 cursor-default select-text">{form.author}</div>
           ) : (
-            <input className="input-field" value={form.author} onChange={(e) => onChange({ author: e.target.value })} required />
+            <select 
+              className="input-field" 
+              value={form.author} 
+              onChange={(e) => onChange({ author: e.target.value })} 
+              required
+            >
+              <option value="">Select author...</option>
+              {form.author && !projectMembers.some(member => (member.name || member.displayName || '') === form.author) && (
+                <option value={form.author} disabled>{form.author} (current)</option>
+              )}
+              {projectMembers.map((member, idx) => {
+                const name = member?.name || member?.displayName || '';
+                const key = member?.id || member?.userId || String(idx);
+                return name ? (
+                  <option key={key} value={name}>{name}</option>
+                ) : null;
+              })}
+              {/* Debug info */}
+              {projectMembers.length === 0 && (
+                <option disabled>No project members found</option>
+              )}
+            </select>
           )}
         </div>
         <div>
@@ -164,7 +194,7 @@ export default function TestCaseForm({
         </div>
         {isReadOnly ? (
           <div className="input-field bg-white/5 cursor-default select-text">
-            {(form.tags || []).join(', ')}
+            <TagPills tags={availableTags.filter(t => (form.tags || []).includes(t.id))} size="sm" />
           </div>
         ) : (
           <TagMultiSelect

@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { testTypeService } from '../../services/testTypeService';
 import TestTypeSelect from './TestTypeSelect';
 import TagMultiSelect from '../TagMultiSelect';
+import RichTextEditor from '../common/RichTextEditor';
 
 export default function TestCaseEditModal({
   open,
@@ -15,6 +16,7 @@ export default function TestCaseEditModal({
   onUpdateStep,
   onSubmit,
   onClose,
+  projectMembers = [],
 }) {
   const { currentUserData, currentOrganization } = useAuth();
   const [orgTypes, setOrgTypes] = useState([]);
@@ -62,7 +64,7 @@ export default function TestCaseEditModal({
           </button>
         </div>
 
-        <form onSubmit={onSubmit} className="tc-testcase-form tc-testcase-edit space-y-6">
+        <form onSubmit={(e) => { e.preventDefault(); onSubmit?.(form); }} className="tc-testcase-form tc-testcase-edit space-y-6">
           <div className="flex items-center gap-2">
             <Info className="h-5 w-5 text-[rgb(var(--tc-icon))]" />
             <h4 className="text-lg font-medium text-foreground">Basic Information</h4>
@@ -91,13 +93,25 @@ export default function TestCaseEditModal({
               <h4 className="text-lg font-medium text-foreground">Description/Objective</h4>
             </div>
             <label className="block text-sm font-medium text-foreground mb-2">Description/Objective <span className="text-red-500">*</span></label>
-            <textarea rows={3} className="input-field" value={form.description} onChange={(e) => onChange({ description: e.target.value })} required />
+            <RichTextEditor value={form.description || ''} onChange={(html) => onChange({ description: html })} />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">Test Author <span className="text-red-500">*</span></label>
-              <input className="input-field" value={form.author} onChange={(e) => onChange({ author: e.target.value })} required />
+              <select
+                className="input-field"
+                value={form.author || ''}
+                onChange={(e) => onChange({ author: e.target.value })}
+                required
+              >
+                <option value="">Select author…</option>
+                {projectMembers.map((m, idx) => {
+                  const name = m?.name || m?.displayName || '';
+                  const key = m?.id || m?.userId || String(idx);
+                  return name ? <option key={key} value={name}>{name}</option> : null;
+                })}
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">Test Type</label>

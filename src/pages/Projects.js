@@ -45,6 +45,8 @@ const Projects = () => {
   useEffect(() => {
     const load = async () => {
       if (!currentUser) return;
+      console.log('Projects: Loading projects, showOnlyActive:', showOnlyActive);
+      
       // Load orgs selector for App Admins
       if (currentUserData?.roles?.includes('APP_ADMIN')) {
         const orgs = await getOrganizations();
@@ -54,12 +56,15 @@ const Projects = () => {
       const isAdmin = currentUserData?.roles?.includes('APP_ADMIN');
       let list = [];
       if (isAdmin && (!formData.organizationId && !currentOrganization?.organisationId)) {
+        console.log('Projects: Loading all projects for App Admin, includeInactive:', !showOnlyActive);
         list = await getAllProjects({ includeInactive: !showOnlyActive });
       } else {
         const orgId = isAdmin ? (formData.organizationId || currentOrganization?.organisationId || null)
                               : (currentOrganization?.organisationId || currentUserData?.organisationId || null);
+        console.log('Projects: Loading projects for org:', orgId, 'includeInactive:', !showOnlyActive);
         list = await getProjects(orgId, { includeInactive: !showOnlyActive });
       }
+      console.log('Projects: Loaded projects count:', list.length);
       setProjects(list);
     };
     load();
@@ -275,7 +280,10 @@ const Projects = () => {
               type="checkbox"
               className="sr-only"
               checked={showOnlyActive}
-              onChange={(e) => setShowOnlyActive(e.target.checked)}
+              onChange={(e) => {
+                console.log('Projects: Toggle changed to:', e.target.checked);
+                setShowOnlyActive(e.target.checked);
+              }}
             />
             <span className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${showOnlyActive ? 'bg-green-600' : 'bg-white/10 border border-subtle'}`}>
               <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${showOnlyActive ? 'translate-x-6' : 'translate-x-1'}`}></span>
@@ -330,6 +338,18 @@ const Projects = () => {
               { id: 'name', header: 'Project', accessorKey: 'name', size: 220, filterType: 'text', cell: ({ getValue }) => (
                 <span className="text-foreground font-medium truncate" title={getValue()}>{getValue()}</span>
               )},
+              // Show Organization column only for App Admins viewing all projects
+              ...(currentUserData?.roles?.includes('APP_ADMIN') && (!formData.organizationId && !currentOrganization?.organisationId) ? [{
+                id: 'organization', 
+                header: 'Organization', 
+                accessorKey: 'organizationName', 
+                size: 180, 
+                filterType: 'text', 
+                cell: ({ getValue, row }) => {
+                  const orgName = getValue() || row.original.organizationName || '—';
+                  return <span className="text-menu truncate" title={orgName}>{orgName}</span>;
+                }
+              }] : []),
               { id: 'description', header: 'Description', accessorKey: 'description', size: 320, filterType: 'text', cell: ({ getValue }) => (
                 <span className="text-menu truncate" title={getValue()}>{getValue()}</span>
               )},
@@ -400,6 +420,13 @@ const Projects = () => {
                       <div className="text-foreground font-medium">{p.createdByName || '—'}</div>
                     </div>
                   </div>
+                  {/* Show Organization for App Admins viewing all projects */}
+                  {currentUserData?.roles?.includes('APP_ADMIN') && (!formData.organizationId && !currentOrganization?.organisationId) && (
+                    <div className="mt-2 text-sm">
+                      <div className="text-menu">Organization</div>
+                      <div className="text-foreground font-medium">{p.organizationName || '—'}</div>
+                    </div>
+                  )}
                   <div className="mt-4 flex items-center space-x-2">
                     <button className="p-1.5 text-menu hover:text-white hover:bg-white/10 rounded" title="View Project" onClick={() => alert('Project view not yet implemented')}>
                       <Eye className="w-4 h-4" />

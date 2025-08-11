@@ -20,6 +20,7 @@ import Login from './pages/Login';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { ToastProvider } from './components/Toast';
 import './utils/setupAppAdmin'; // Import to make setup function available globally
 import './utils/verifyDeployment'; // Import to make verification function available globally
 import './utils/resetUserPassword'; // Import to make reset password function available globally
@@ -124,9 +125,11 @@ function App() {
   return (
     <AuthProvider>
       <ThemeProvider>
-        <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-          <AppRoutes />
-        </Router>
+        <ToastProvider>
+          <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <AppRoutes />
+          </Router>
+        </ToastProvider>
       </ThemeProvider>
     </AuthProvider>
   );

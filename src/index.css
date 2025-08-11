@@ -57,6 +57,51 @@
   .input-field {
     @apply w-full px-4 py-3 border border-subtle rounded-lg focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent placeholder:text-grey-mid bg-card text-foreground;
   }
+  /* Quill dark mode adjustments */
+  .dark .tc-richtext .ql-toolbar.ql-snow {
+    background: #0f1113 !important;
+    border-color: #262626 !important;
+    color: #e5e7eb !important;
+  }
+  .dark .tc-richtext .ql-container.ql-snow {
+    background: #141617 !important;
+    border-color: #262626 !important;
+    color: #e5e7eb !important;
+  }
+  .dark .tc-richtext .ql-picker, .dark .tc-richtext .ql-stroke { color: #e5e7eb; stroke: #e5e7eb; }
+  .dark .tc-richtext .ql-fill { fill: #e5e7eb; }
+  .dark .tc-richtext .ql-editor a { color: #60a5fa; }
+  .tc-richtext .ql-tooltip { z-index: 60; }
+  .dark .tc-richtext .ql-tooltip { background: #111418; border-color: #262626; color: #e5e7eb; }
+  .dark .tc-richtext .ql-tooltip input { background: #0a0a0a; color: #e5e7eb; border-color: #262626; }
+
+  /* Custom clipboard button icon (placed before Image) */
+  .tc-richtext .ql-toolbar .ql-formats button.ql-clipboard::before {
+    content: '';
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 18px 18px;
+    /* Lucide clipboard icon as data URI */
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='8' height='4' x='8' y='2' rx='1' ry='1'/><path d='M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2'/></svg>");
+  }
+  .tc-richtext .ql-toolbar .ql-formats button.ql-clipboard:hover::before {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='8' height='4' x='8' y='2' rx='1' ry='1'/><path d='M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2'/></svg>");
+  }
+
+  /* Custom probe button icon (small checkmark) */
+  .tc-richtext .ql-toolbar .ql-formats button.ql-probe::before {
+    content: '';
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 18px 18px;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%2386efac' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M20 6L9 17l-5-5'/></svg>");
+  }
   /* Force exact dark field background (#0a0a0a) in Test Case forms and View modal */
   .dark .tc-testcase-form .input-field { @apply bg-[#0a0a0a]; }
   .dark .tc-testcase-form select.input-field { @apply bg-[#0a0a0a]; }

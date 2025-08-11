@@ -3,6 +3,7 @@ import { Folder as FolderIcon } from 'lucide-react';
 import { folderService } from '../../services/folderService';
 import { testCaseService } from '../../services/testCaseService';
 import { testTypeService } from '../../services/testTypeService';
+import { resolveUserName } from '../../utils/textUtils';
 
 const statusClasses = {
   Passed: 'text-green-400 bg-green-900/20',
@@ -34,11 +35,13 @@ export default function TestCaseTree({
   onSelectTestCase,
   onOpenTestCase,
   refreshKey = 0,
+  reloadFolderId = null,
   searchTerm = '',
   filterStatus = 'all',
   filterPriority = 'all',
   filterTestType = 'all',
   selectedTagIds = [],
+  organizationUsers = [],
 }) {
   const { mapById: testTypeMap } = useOrgTestTypes(organizationId);
   const [rootItems, setRootItems] = useState([]);
@@ -87,6 +90,22 @@ export default function TestCaseTree({
     })();
     return () => { alive = false; };
   }, [organizationId, projectId, refreshKey]);
+
+  // Targeted reload of a specific folder's children when requested by parent
+  useEffect(() => {
+    let ignore = false;
+    (async () => {
+      if (!organizationId || !projectId) return;
+      if (reloadFolderId === null) {
+        // reload roots
+        const items = await loadItems(null);
+        if (!ignore) setRootItems(items);
+        return;
+      }
+      await reloadFolderChildren(reloadFolderId);
+    })();
+    return () => { ignore = true; };
+  }, [reloadFolderId]);
 
   const ensureLoaded = async (folderId) => {
     if (!childrenMap.has(folderId)) {
@@ -178,7 +197,12 @@ export default function TestCaseTree({
   const passesFilters = (tc) => {
     if (searchTerm) {
       const q = searchTerm.toLowerCase();
-      const text = `${tc.tcid} ${tc.name} ${tc.description || ''} ${tc.author || ''}`.toLowerCase();
+      const sanitize = (html) => {
+        const tmp = document.createElement('div');
+        tmp.innerHTML = html || '';
+        return (tmp.textContent || tmp.innerText || '').toLowerCase();
+      };
+      const text = `${tc.tcid} ${tc.name} ${sanitize(tc.description)} ${resolveUserName(tc.author, organizationUsers)}`.toLowerCase();
       if (!text.includes(q)) return false;
     }
     if (filterStatus !== 'all' && (tc.overallResult || 'Not Run') !== filterStatus) return false;
@@ -238,6 +262,16 @@ export default function TestCaseTree({
     let kids = childrenMap.get(node.id) || [];
     // Apply filtering to children: always show folders; test cases filtered.
     kids = kids.filter((c) => c.type === 'folder' || passesFilters(c.raw));
+    
+    // Auto-expand folders that contain matching test cases when searching
+    const hasMatchingTestCases = kids.some(c => c.type === 'tc' && passesFilters(c.raw));
+    const shouldAutoExpand = (searchTerm || filterStatus !== 'all' || filterPriority !== 'all' || filterTestType !== 'all' || (selectedTagIds && selectedTagIds.length > 0)) && hasMatchingTestCases;
+    
+    if (shouldAutoExpand && !isOpen) {
+      // Auto-expand this folder
+      setTimeout(() => toggle(node.id), 100);
+    }
+    
     return (
       <div key={`folder:${node.id}`}>
         <div

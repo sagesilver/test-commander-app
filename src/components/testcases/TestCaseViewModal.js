@@ -1,6 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { X, Info, BarChart3, ClipboardList, ListOrdered, ListChecks } from 'lucide-react';
+import RichTextViewer from '../common/RichTextViewer';
+import { resolveUserName } from '../../utils/textUtils';
 
 const statusColors = {
   Passed: 'text-green-400 bg-green-900/20',
@@ -32,7 +34,7 @@ const priorityPill = (p) => {
   return map[p] || map.Medium;
 };
 
-export default function TestCaseViewModal({ open, testCase, onClose, resolveTags }) {
+export default function TestCaseViewModal({ open, testCase, onClose, resolveTags, organizationUsers = [] }) {
   if (!open || !testCase) return null;
   const priority = testCase.priority || getPriorityFromTestType(testCase.testType);
 
@@ -68,7 +70,7 @@ export default function TestCaseViewModal({ open, testCase, onClose, resolveTags
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">Author</label>
-                  <input disabled className="input-field" value={testCase.author || ''} />
+                  <input disabled className="input-field" value={resolveUserName(testCase.author, organizationUsers) || ''} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">Test Type</label>
@@ -137,7 +139,7 @@ export default function TestCaseViewModal({ open, testCase, onClose, resolveTags
               <ClipboardList className="h-5 w-5 text-[rgb(var(--tc-icon))]" />
               <h4 className="text-lg font-medium text-foreground">Description/Objective</h4>
             </div>
-            <textarea disabled className="input-field" rows="3" value={testCase.description || ''} />
+            <RichTextViewer html={testCase.description || ''} />
           </div>
 
           {testCase.prerequisites && (

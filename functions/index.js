@@ -9,6 +9,7 @@ try {
 }
 
 const db = admin.firestore();
+const storage = admin.storage();
 
 // Helper to validate input
 function assert(condition, message) {
@@ -485,5 +486,99 @@ exports.createTestCaseWithUniqueTcid = functions
     });
 
     return { success: true, tcid };
+  });
+
+// Upload editor asset via Cloud Functions to avoid browser CORS issues
+exports.uploadEditorAsset = functions
+  .region('australia-southeast1')
+  .https.onCall(async (data, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+    }
+    const { base64, contentType, fileName } = data || {};
+    if (!base64 || !contentType) {
+      throw new functions.https.HttpsError('invalid-argument', 'base64 and contentType are required');
+    }
+    if (!/^image\//i.test(contentType)) {
+      throw new functions.https.HttpsError('failed-precondition', 'Only image uploads are allowed');
+    }
+    const buffer = Buffer.from(base64, 'base64');
+    const maxBytes = 4 * 1024 * 1024;
+    if (buffer.length > maxBytes) {
+      throw new functions.https.HttpsError('failed-precondition', 'Image exceeds 4 MB limit');
+    }
+    const y = new Date().getFullYear();
+    const m = String(new Date().getMonth() + 1).padStart(2, '0');
+    const safeName = String(fileName || 'image').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 60) || 'image';
+    const uid = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).slice(2);
+    const ext = contentType.split('/')[1] || 'png';
+    const path = `editor/${y}/${m}/${uid}-${safeName}.${ext}`;
+    const bucket = storage.bucket();
+    const file = bucket.file(path);
+    const token = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).slice(2);
+    await file.save(buffer, {
+      contentType,
+      metadata: {
+        metadata: {
+          firebaseStorageDownloadTokens: token,
+        },
+      },
+      resumable: false,
+    });
+    const encoded = encodeURIComponent(path);
+    const downloadURL = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encoded}?alt=media&token=${token}`;
+    return { downloadURL, path, contentType, size: buffer.length };
+  });
+
+// CORS-enabled HTTP endpoint with ID token check
+exports.uploadEditorAssetHttp = functions
+  .region('australia-southeast1')
+  .https.onRequest(async (req, res) => {
+    const allowOrigin = req.headers.origin || '*';
+    res.set('Access-Control-Allow-Origin', allowOrigin);
+    res.set('Vary', 'Origin');
+    res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    if (req.method === 'OPTIONS') {
+      return res.status(204).send('');
+    }
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method Not Allowed' });
+    }
+    try {
+      const authHeader = req.headers.authorization || '';
+      const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+      if (!token) return res.status(401).json({ error: 'Missing Authorization bearer token' });
+      const decoded = await admin.auth().verifyIdToken(token);
+      if (!decoded || !decoded.uid) return res.status(401).json({ error: 'Invalid token' });
+
+      const { base64, contentType, fileName } = req.body || {};
+      if (!base64 || !contentType) return res.status(400).json({ error: 'base64 and contentType required' });
+      if (!/^image\//i.test(contentType)) return res.status(400).json({ error: 'Only image uploads allowed' });
+      const buffer = Buffer.from(base64, 'base64');
+      const maxBytes = 4 * 1024 * 1024;
+      if (buffer.length > maxBytes) return res.status(400).json({ error: 'Image exceeds 4 MB' });
+
+      const y = new Date().getFullYear();
+      const m = String(new Date().getMonth() + 1).padStart(2, '0');
+      const safeName = String(fileName || 'image').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 60) || 'image';
+      const uid = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).slice(2);
+      const ext = (contentType.split('/')[1] || 'png').toLowerCase();
+      const path = `editor/${y}/${m}/${uid}-${safeName}.${ext}`;
+      const bucket = storage.bucket();
+      const file = bucket.file(path);
+      const dlToken = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).slice(2);
+      await file.save(buffer, {
+        contentType,
+        metadata: { metadata: { firebaseStorageDownloadTokens: dlToken } },
+        resumable: false,
+      });
+      const encoded = encodeURIComponent(path);
+      const downloadURL = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encoded}?alt=media&token=${dlToken}`;
+      return res.status(200).json({ downloadURL, path, contentType, size: buffer.length });
+    } catch (err) {
+      console.error('uploadEditorAssetHttp failed', err);
+      return res.status(500).json({ error: 'Internal error' });
+    }
   });
 
