@@ -9,7 +9,7 @@ A modern, extensible platform for managing test cases, issues/defects, test sche
 - **Defect Tracking**: Comprehensive issue management with workflow states
 - **Test Scheduling**: Multi-phase test execution with cycle management
 - **Reporting & Analytics**: Interactive dashboards with exportable reports
-- **User Management**: Role-based access control and authentication
+- **User Management**: Role-based access control and authentication.
 
 ### 🎨 Design Highlights
 - **Modern UI**: Clean, professional interface with subtle animations
