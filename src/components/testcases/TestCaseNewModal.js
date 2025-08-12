@@ -16,16 +16,18 @@ export default function TestCaseNewModal({
   onUpdateStep,
   onSubmit,
   onClose,
+  onAddGlobalTag,
+  onDeleteGlobalTag,
+  availableTags: availableTagsProp = [],
   projectMembers = [],
 }) {
   const { currentUserData, currentOrganization } = useAuth();
   const [orgTypes, setOrgTypes] = useState([]);
-  const [availableTags, setAvailableTags] = useState([
-    { id: 'ui', name: 'UI', color: '#0ea5e9' },
-    { id: 'api', name: 'API', color: '#10b981' },
-    { id: 'regression', name: 'Regression', color: '#f59e0b' },
-    { id: 'security', name: 'Security', color: '#ef4444' },
-  ]);
+  const [availableTags, setAvailableTags] = useState(availableTagsProp);
+
+  useEffect(() => {
+    if (Array.isArray(availableTagsProp)) setAvailableTags(availableTagsProp);
+  }, [availableTagsProp]);
 
   useEffect(() => {
     let alive = true;
@@ -46,6 +48,7 @@ export default function TestCaseNewModal({
       }
       return [...prev, tag];
     });
+    onAddGlobalTag?.(tag);
   };
 
   if (!open) return null;
@@ -142,10 +145,17 @@ export default function TestCaseNewModal({
               <h4 className="text-lg font-medium text-foreground">Tags</h4>
             </div>
             <TagMultiSelect
-              availableTags={availableTags}
+              availableTags={(() => {
+                const map = new Map((availableTags || []).map(t => [t.id, t]));
+                (form.tags || []).forEach(id => {
+                  if (!map.has(id)) map.set(id, { id, name: id, color: '#64748b' });
+                });
+                return Array.from(map.values());
+              })()}
               value={form.tags || []}
               onChange={(ids) => onChange({ tags: ids })}
               onAddTag={addOrUpdateTag}
+              onDeleteTag={onDeleteGlobalTag}
               label="Tags"
             />
           </div>

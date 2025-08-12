@@ -20,6 +20,7 @@ export default function TestCaseForm({
   submitLabel = 'Create Test Case',
   showActions = true,
   projectMembers = [],
+  availableTags: availableTagsProp = [],
 }) {
   const isReadOnly = mode === 'view';
   const [orgTypes, setOrgTypes] = useState([]);
@@ -30,8 +31,11 @@ export default function TestCaseForm({
     { id: 'security', color: '#ef4444' },
   ]);
 
-  // Debug logging
-  console.log('TestCaseForm render:', { mode, form: form?.tcid, author: form?.author, projectMembers: projectMembers?.length });
+  useEffect(() => {
+    if (Array.isArray(availableTagsProp) && availableTagsProp.length > 0) {
+      setAvailableTags(availableTagsProp);
+    }
+  }, [availableTagsProp]);
 
   useEffect(() => {
     let alive = true;
@@ -54,6 +58,12 @@ export default function TestCaseForm({
       return [...prev, tag];
     });
   };
+
+  const mergedAvailableForDisplay = (() => {
+    const map = new Map((availableTags || []).map(t => [t.id, t]));
+    (form?.tags || []).forEach(id => { if (!map.has(id)) map.set(id, { id, name: id, color: '#64748b' }); });
+    return Array.from(map.values());
+  })();
 
   return (
     <form onSubmit={onSubmit} className={`tc-testcase-form ${mode === 'create' ? 'tc-testcase-new' : 'tc-testcase-edit'} space-y-6`}>
@@ -123,7 +133,6 @@ export default function TestCaseForm({
                   <option key={key} value={name}>{name}</option>
                 ) : null;
               })}
-              {/* Debug info */}
               {projectMembers.length === 0 && (
                 <option disabled>No project members found</option>
               )}
@@ -194,11 +203,11 @@ export default function TestCaseForm({
         </div>
         {isReadOnly ? (
           <div className="input-field bg-white/5 cursor-default select-text">
-            <TagPills tags={availableTags.filter(t => (form.tags || []).includes(t.id))} size="sm" />
+            <TagPills tags={mergedAvailableForDisplay.filter(t => (form.tags || []).includes(t.id))} size="sm" />
           </div>
         ) : (
           <TagMultiSelect
-            availableTags={availableTags}
+            availableTags={mergedAvailableForDisplay}
             value={form.tags || []}
             onChange={(ids) => onChange({ tags: ids })}
             onAddTag={addOrUpdateTag}

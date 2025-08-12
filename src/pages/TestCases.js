@@ -42,6 +42,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { testCaseService } from '../services/testCaseService';
 import { useToast } from '../components/Toast';
 import { projectsService } from '../services/projectsService';
+import { tagService } from '../services/tagService';
 
 const TestCases = () => {
   const { currentUserData, currentOrganization, getUsers } = useAuth();
@@ -74,6 +75,8 @@ const TestCases = () => {
   const [selectedProjectId, setSelectedProjectId] = useState(null);
   // Organization users for Test Author dropdown
   const [organizationUsers, setOrganizationUsers] = useState([]);
+  // List view refresh signal to reload visible nodes after saves
+  const [listRefreshKey, setListRefreshKey] = useState(0);
   
   // Form state for new test case
   const [newTestCaseForm, setNewTestCaseForm] = useState({
@@ -120,6 +123,22 @@ const TestCases = () => {
       }));
     }
   }, [currentUserData]);
+
+  // Load organization tags
+  useEffect(() => {
+    // Load organization tags
+    (async () => {
+      if (!currentOrganization?.id) return;
+      try {
+        const tags = await tagService.listOrgTags(currentOrganization.id);
+        if (Array.isArray(tags) && tags.length > 0) {
+          setAvailableTags(tags);
+        }
+      } catch (_) {
+        // fallback to defaults already set
+      }
+    })();
+  }, [currentOrganization?.id]);
 
   const loadTestCases = async () => {
     try {
@@ -183,9 +202,17 @@ const TestCases = () => {
     }
   };
 
-  const resolveTags = (tagIds) => {
+  const resolveTags = (tagIds, snapshot = null) => {
     if (!Array.isArray(tagIds)) return [];
-    return availableTags.filter(tag => tagIds.includes(tag.id));
+    if (snapshot && typeof snapshot === 'object') {
+      return tagIds.map((id) => {
+        const s = snapshot[id];
+        if (s) return { id: s.id || id, name: s.name || id, color: s.color || '#64748b' };
+        return { id, name: id, color: '#64748b' };
+      });
+    }
+    const byId = new Map(availableTags.map(t => [t.id, t]));
+    return tagIds.map((id) => byId.get(id) || { id, name: id, color: '#64748b' });
   };
 
   const addOrUpdateTag = (tag) => {
@@ -268,6 +295,21 @@ const TestCases = () => {
     }
   };
 
+  const buildTagsSnapshot = (tagIds) => {
+    if (!Array.isArray(tagIds)) return {};
+    const byId = new Map(availableTags.map(t => [t.id, t]));
+    const snapshot = {};
+    tagIds.forEach((id) => {
+      const t = byId.get(id);
+      snapshot[id] = {
+        id,
+        name: t?.name || id,
+        color: t?.color || '#64748b',
+      };
+    });
+    return snapshot;
+  };
+
   const handleNewTestCaseSubmit = async (formData) => {
     try {
       if (!selectedProjectId) {
@@ -284,7 +326,9 @@ const TestCases = () => {
         tcid: (formData?.tcid || '').trim() || makeTcid(formData?.name),
         author: currentUserData?.name || currentUserData?.displayName || currentUserData?.email,
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
+        tags: Array.isArray(formData.tags) ? formData.tags : [],
+        tags_snapshot: buildTagsSnapshot(Array.isArray(formData.tags) ? formData.tags : []),
       };
       await testCaseService.createTestCase(currentOrganization.id, selectedProjectId, payload);
       push({ variant: 'success', message: `Test Case <${payload.tcid}: ${payload.name}> was successfully added to the database` });
@@ -308,21 +352,78 @@ const TestCases = () => {
     }
   };
 
+  // Shared saver for consistent updates across views
+  const saveTestCaseUpdates = async ({ id, projectId, updates }) => {
+    if (!id || !projectId) {
+      window.alert('Cannot update test case. Missing identifiers.');
+      return false;
+    }
+    try {
+      // Ensure snapshot accompanies tag changes
+      const tags = Array.isArray(updates?.tags) ? updates.tags : undefined;
+      const withSnapshot = typeof tags !== 'undefined'
+        ? { ...updates, tags_snapshot: buildTagsSnapshot(tags) }
+        : updates;
+
+      await testCaseService.updateTestCase(currentOrganization.id, projectId, id, {
+        ...withSnapshot,
+        updatedAt: new Date().toISOString(),
+      });
+      // Optimistic local update: list/grid
+      setTestCases((prev) => (Array.isArray(prev)
+        ? prev.map(tc => tc.id === id ? { ...tc, ...withSnapshot } : tc)
+        : prev));
+      // Keep selected copy in sync if open elsewhere
+      setSelectedTestCase((prev) => (prev && prev.id === id ? { ...prev, ...withSnapshot } : prev));
+      // Merge any newly used tag ids into availableTags so they render immediately
+      if (Array.isArray(withSnapshot?.tags) && withSnapshot.tags.length > 0) {
+        setAvailableTags((prev) => {
+          const seen = new Set(prev.map(t => t.id));
+          const additions = withSnapshot.tags
+            .filter(id => !seen.has(id))
+            .map(id => ({ id, name: id, color: '#64748b' }));
+          return additions.length > 0 ? [...prev, ...additions] : prev;
+        });
+      }
+      push({ variant: 'success', message: 'Test case updated successfully' });
+      // Notify list view to reload expanded rows without full page refresh
+      setListRefreshKey((k) => k + 1);
+      return true;
+    } catch (error) {
+      console.error('Error updating test case:', error);
+      push({ variant: 'error', message: 'Failed to update test case' });
+      return false;
+    }
+  };
+
   const handleEditTestCaseSubmit = async (formData) => {
     try {
       if (!selectedTestCase?.projectId) {
         window.alert('Cannot update test case. Missing project reference.');
         return;
       }
-      await testCaseService.updateTestCase(currentOrganization.id, selectedTestCase.projectId, selectedTestCase.id, {
-        ...formData,
-        updatedAt: new Date().toISOString()
+      const ok = await saveTestCaseUpdates({
+        id: selectedTestCase.id,
+        projectId: selectedTestCase.projectId,
+        updates: {
+          // Ensure arrays/strings are well-formed
+          name: formData.name,
+          description: formData.description || '',
+          author: formData.author || '',
+          testType: formData.testType || '',
+          testTypeCode: formData.testTypeCode || '',
+          priority: formData.priority || 'Medium',
+          prerequisites: formData.prerequisites || '',
+          tags: Array.isArray(formData.tags) ? formData.tags : [],
+          testSteps: Array.isArray(formData.testSteps) ? formData.testSteps : [],
+        }
       });
-      push({ variant: 'success', message: 'Test case updated successfully' });
+      if (!ok) return;
       setShowEditTestCaseModal(false);
       setSelectedTestCase(null);
       setEditTestCaseForm({});
-      await loadTestCases();
+      // No hard reload required, but keep data fresh
+      // await loadTestCases(); // optional; optimistic update already applied
     } catch (error) {
       console.error('Error updating test case:', error);
       push({ variant: 'error', message: 'Failed to update test case' });
@@ -508,7 +609,7 @@ const TestCases = () => {
                   
                   {testCase.tags && testCase.tags.length > 0 && (
                     <div className="flex gap-1">
-                      {resolveTags(testCase.tags).slice(0, 2).map(tag => (
+                      {resolveTags(testCase.tags, testCase.tags_snapshot).slice(0, 2).map(tag => (
                         <span
                           key={tag.id}
                           className="w-2 h-2 rounded-full"
@@ -611,6 +712,32 @@ const TestCases = () => {
 
   const filteredTestCases = getFilteredTestCases();
 
+  const upsertGlobalTag = async (tag) => {
+    if (!tag || !currentOrganization?.id) return;
+    try {
+      const saved = await tagService.upsertOrgTag(currentOrganization.id, tag);
+      setAvailableTags((prev) => {
+        const map = new Map(prev.map(t => [t.id, t]));
+        map.set(saved.id, { ...map.get(saved.id), ...saved });
+        return Array.from(map.values());
+      });
+    } catch (e) {
+      console.error('Failed to upsert tag', e);
+    }
+  };
+
+  const softDeleteGlobalTag = async (tagId) => {
+    if (!tagId || !currentOrganization?.id) return;
+    try {
+      await tagService.softDeleteOrgTag(currentOrganization.id, tagId);
+      // Remove from available list used by selectors
+      setAvailableTags((prev) => prev.filter(t => t.id !== tagId));
+      // No need to change existing test cases (snapshot fallback later if needed)
+    } catch (e) {
+      console.error('Failed to delete tag', e);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-surface">
       <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
@@ -647,6 +774,8 @@ const TestCases = () => {
           onList={() => setViewMode('list')}
           onGrid={() => setViewMode('grid')}
           onFolder={() => navigate('/test-cases-folder', { state: { viewMode: 'folder' }, replace: true })}
+          onAddGlobalTag={upsertGlobalTag}
+          onDeleteGlobalTag={softDeleteGlobalTag}
         />
 
         {/* Content */}
@@ -656,6 +785,7 @@ const TestCases = () => {
               organizationId={currentOrganization.id}
               projects={projects}
               selectedProjectId={selectedProjectId}
+              refreshKey={listRefreshKey}
               searchTerm={searchTerm}
               filterStatus={filterStatus}
               filterPriority={filterPriority}
@@ -697,6 +827,9 @@ const TestCases = () => {
           onSubmit={handleNewTestCaseSubmit}
           onClose={() => setShowNewTestCaseModal(false)}
           projectMembers={organizationUsers}
+          onAddGlobalTag={upsertGlobalTag}
+          onDeleteGlobalTag={softDeleteGlobalTag}
+          availableTags={availableTags}
         />
       )}
 
@@ -709,13 +842,16 @@ const TestCases = () => {
           onRemoveStep={handleEditTestCaseRemoveStep}
           onUpdateStep={handleEditTestCaseUpdateStep}
           onSubmit={handleEditTestCaseSubmit}
-                      onClose={() => {
-              setShowEditTestCaseModal(false);
-              setSelectedTestCase(null);
-              setEditTestCaseForm({});
-            }}
-            projectMembers={organizationUsers}
-          />
+          onClose={() => {
+            setShowEditTestCaseModal(false);
+            setSelectedTestCase(null);
+            setEditTestCaseForm({});
+          }}
+          projectMembers={organizationUsers}
+          onAddGlobalTag={upsertGlobalTag}
+          onDeleteGlobalTag={softDeleteGlobalTag}
+          availableTags={availableTags}
+        />
       )}
 
       {showViewTestCaseModal && selectedTestCase && (

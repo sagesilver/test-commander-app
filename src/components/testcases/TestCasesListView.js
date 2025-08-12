@@ -11,6 +11,7 @@ export default function TestCasesListView({
   organizationId,
   projects = [],
   selectedProjectId = null,
+  refreshKey = 0,
   searchTerm = '',
   filterStatus = 'all',
   filterPriority = 'all',
@@ -380,6 +381,21 @@ export default function TestCasesListView({
   const effectiveProjects = selectedProjectId
     ? projects.filter((p) => (p.id || p.projectId) === selectedProjectId)
     : projects;
+
+  // When refreshKey changes, reload visible project/folder nodes
+  useEffect(() => {
+    (async () => {
+      if (!selectedProjectId) return;
+      // Reload root nodes for selected project
+      await loadRootForProject(selectedProjectId);
+      // Reload any expanded folders within selected project
+      const expandedForProject = Array.from(expanded).filter(id => id.startsWith(`folder:${selectedProjectId}:`));
+      for (const id of expandedForProject) {
+        const folderId = id.split(':')[2];
+        await loadChildrenForFolder(selectedProjectId, folderId);
+      }
+    })();
+  }, [refreshKey]);
 
   return (
     <div className="p-6">

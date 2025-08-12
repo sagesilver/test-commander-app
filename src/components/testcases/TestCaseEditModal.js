@@ -17,15 +17,20 @@ export default function TestCaseEditModal({
   onSubmit,
   onClose,
   projectMembers = [],
+  onAddGlobalTag,
+  availableTags: availableTagsProp = [],
+  onDeleteGlobalTag,
 }) {
   const { currentUserData, currentOrganization } = useAuth();
   const [orgTypes, setOrgTypes] = useState([]);
-  const [availableTags, setAvailableTags] = useState([
-    { id: 'ui', name: 'UI', color: '#0ea5e9' },
-    { id: 'api', name: 'API', color: '#10b981' },
-    { id: 'regression', name: 'Regression', color: '#f59e0b' },
-    { id: 'security', name: 'Security', color: '#ef4444' },
-  ]);
+  const [availableTags, setAvailableTags] = useState(availableTagsProp);
+
+  // Keep local tags in sync with organization tags
+  useEffect(() => {
+    if (Array.isArray(availableTagsProp)) {
+      setAvailableTags(availableTagsProp);
+    }
+  }, [availableTagsProp]);
 
   useEffect(() => {
     let alive = true;
@@ -46,6 +51,8 @@ export default function TestCaseEditModal({
       }
       return [...prev, tag];
     });
+    // Persist to organization-level list (color/name)
+    onAddGlobalTag?.(tag);
   };
 
   if (!open) return null;
@@ -138,10 +145,18 @@ export default function TestCaseEditModal({
               <h4 className="text-lg font-medium text-foreground">Tags</h4>
             </div>
             <TagMultiSelect
-              availableTags={availableTags}
+              availableTags={(() => {
+                // Ensure selected tags render even if not present in available list
+                const map = new Map((availableTags || []).map(t => [t.id, t]));
+                (form.tags || []).forEach(id => {
+                  if (!map.has(id)) map.set(id, { id, name: id, color: '#64748b' });
+                });
+                return Array.from(map.values());
+              })()}
               value={form.tags || []}
               onChange={(ids) => onChange({ tags: ids })}
               onAddTag={addOrUpdateTag}
+              onDeleteTag={onDeleteGlobalTag}
               label="Tags"
             />
           </div>

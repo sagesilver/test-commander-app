@@ -1,19 +1,21 @@
 import React, { useMemo, useState } from 'react';
 
 /**
- * A lightweight multi-select for tags with inline new-tag creation (mock only).
+ * A lightweight multi-select for tags with inline new-tag creation.
  * props:
  * - availableTags: [{ id, name, color }]
  * - value: string[] (array of tag ids)
  * - onChange: (ids: string[]) => void
- * - onAddTag?: (tag: { id, name, color }) => void (optional, mock add)
- * - label?: string (omit/empty to hide)
+ * - onAddTag?: (tag: { id, name, color }) => void
+ * - onDeleteTag?: (tagId: string) => void  // soft delete globally if provided
+ * - label?: string
  */
 export default function TagMultiSelect({
   availableTags = [],
   value = [],
   onChange,
   onAddTag,
+  onDeleteTag,
   label = 'Tags',
 }) {
   const [newTagName, setNewTagName] = useState('');
@@ -33,7 +35,15 @@ export default function TagMultiSelect({
     const id = name.toLowerCase().replace(/\s+/g, '-');
     const tag = { id, name, color: newTagColor };
     onAddTag?.(tag);
+    // Auto-select the new tag so it is persisted on save
+    const current = Array.isArray(value) ? value : [];
+    const next = Array.from(new Set([...current, id]));
+    onChange?.(next);
     setNewTagName('');
+  };
+
+  const removeTagGlobally = (id) => {
+    onDeleteTag?.(id);
   };
 
   return (
@@ -49,19 +59,30 @@ export default function TagMultiSelect({
           {availableTags.map((t) => {
             const isSelected = selectedSet.has(t.id);
             return (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => toggle(t.id)}
-                className={`rounded-full px-2.5 py-1 text-sm border transition-colors ${isSelected ? 'text-white' : 'text-white/80'}`}
-                style={{
-                  backgroundColor: isSelected ? t.color : 'transparent',
-                  borderColor: t.color,
-                }}
-                title={t.name}
-              >
-                {t.name}
-              </button>
+              <div key={t.id} className="relative inline-block">
+                <button
+                  type="button"
+                  onClick={() => toggle(t.id)}
+                  className={`rounded-full px-2.5 py-1 text-sm border transition-colors ${isSelected ? 'text-white' : 'text-white/80'}`}
+                  style={{
+                    backgroundColor: isSelected ? t.color : 'transparent',
+                    borderColor: t.color,
+                  }}
+                  title={t.name}
+                >
+                  {t.name}
+                </button>
+                {typeof onDeleteTag === 'function' && (
+                  <button
+                    type="button"
+                    onClick={() => removeTagGlobally(t.id)}
+                    className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-gray-500 text-white text-[10px] flex items-center justify-center"
+                    title="Remove tag from global list"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
             );
           })}
         </div>

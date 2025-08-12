@@ -4,23 +4,13 @@ import { useAuth } from '../../contexts/AuthContext';
 import { testCaseService } from '../../services/testCaseService';
 import TestCaseForm from './TestCaseForm';
 
-export default function InlineTestCasePanel({ testCase, mode = 'view', onModeChange, onSave, projectMembers = [] }) {
+export default function InlineTestCasePanel({ testCase, mode = 'view', onModeChange, onSave, projectMembers = [], availableTags = [] }) {
   const [local, setLocal] = useState(null);
   const { currentUserData, currentOrganization } = useAuth();
-
-  // Debug logging
-  console.log('InlineTestCasePanel render:', { 
-    testCaseId: testCase?.id, 
-    mode, 
-    author: testCase?.author, 
-    projectMembers: projectMembers?.length,
-    projectMembersData: projectMembers 
-  });
 
   useEffect(() => {
     setLocal(testCase ? { ...testCase } : null);
   }, [testCase]);
-
 
   if (!testCase || !local) {
     return <div className="text-menu">Select a test case to view details.</div>;
@@ -77,6 +67,7 @@ export default function InlineTestCasePanel({ testCase, mode = 'view', onModeCha
         submitLabel={isView ? '' : 'Save Changes'}
         showActions={!isView}
         projectMembers={projectMembers}
+        availableTags={availableTags}
       />
     </div>
   );

@@ -27,6 +27,7 @@ export default function TestCasesTop({
   onList,
   onGrid,
   onFolder,
+  onAddGlobalTag,
 }) {
   return (
     <>
@@ -103,10 +104,20 @@ export default function TestCasesTop({
           <div className="mt-4">
             <TagMultiSelect
               availableTags={availableTags}
-              selectedTagIds={selectedTagIds || []}
-              onTagToggle={(id) => onToggleTag?.(id)}
-              onTagSelect={(tag) => onToggleTag?.(tag.id)}
-              onTagDeselect={(tag) => onToggleTag?.(tag.id)}
+              value={selectedTagIds || []}
+              onChange={(ids) => {
+                // Toggle behaviour: compute difference vs prior
+                const prev = new Set(selectedTagIds || []);
+                const next = new Set(ids || []);
+                // Find symmetric difference and toggle each
+                const all = new Set([...prev, ...next]);
+                all.forEach((id) => {
+                  const inPrev = prev.has(id);
+                  const inNext = next.has(id);
+                  if (inPrev !== inNext) onToggleTag?.(id);
+                });
+              }}
+              onAddTag={(tag) => onAddGlobalTag?.(tag)}
               label=""
             />
           </div>
