@@ -1,7 +1,7 @@
 import React from 'react';
 import { Grid, Folder as FolderIcon, Plus, Search, FileText } from 'lucide-react';
 import ExportMenu from '../ExportMenu';
-import TagMultiSelect from '../TagMultiSelect';
+ 
 
 export default function TestCasesTop({
   title = 'Test Cases',
@@ -20,14 +20,11 @@ export default function TestCasesTop({
   setFilterTestType,
   filterPriority = 'all',
   setFilterPriority,
-  availableTags = [],
-  selectedTagIds = [],
-  onToggleTag,
+  
   orgTypes = [],
   onList,
   onGrid,
   onFolder,
-  onAddGlobalTag,
 }) {
   return (
     <>
@@ -100,28 +97,7 @@ export default function TestCasesTop({
             <option value="Low">Low</option>
           </select>
         </div>
-        {Array.isArray(availableTags) && availableTags.length > 0 && (
-          <div className="mt-4">
-            <TagMultiSelect
-              availableTags={availableTags}
-              value={selectedTagIds || []}
-              onChange={(ids) => {
-                // Toggle behaviour: compute difference vs prior
-                const prev = new Set(selectedTagIds || []);
-                const next = new Set(ids || []);
-                // Find symmetric difference and toggle each
-                const all = new Set([...prev, ...next]);
-                all.forEach((id) => {
-                  const inPrev = prev.has(id);
-                  const inNext = next.has(id);
-                  if (inPrev !== inNext) onToggleTag?.(id);
-                });
-              }}
-              onAddTag={(tag) => onAddGlobalTag?.(tag)}
-              label=""
-            />
-          </div>
-        )}
+        
       </div>
 
       {/* View toggles */}

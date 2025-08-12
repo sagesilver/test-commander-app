@@ -13,7 +13,7 @@ import { useToast } from '../components/Toast';
 import TestCaseTree from '../components/testcases/TestCaseTree';
 import TestCasesTop from '../components/testcases/TestCasesTop';
 import { testTypeService } from '../services/testTypeService';
-import { tagService } from '../services/tagService';
+ 
 
 const TestCasesFolder = () => {
   const { currentUserData, currentOrganization, getProjects } = useAuth();
@@ -33,43 +33,18 @@ const TestCasesFolder = () => {
   const [newForm, setNewForm] = useState({ tcid: '', name: '', description: '', author: '', testType: '', overallResult: 'Not Run', prerequisites: '', priority: 'Medium', tags: [], testSteps: [] });
   const [editForm, setEditForm] = useState({ tcid: '', name: '', description: '', author: '', testType: '', overallResult: '', prerequisites: '', priority: 'Medium', tags: [], testSteps: [] });
   const [expandFolderId, setExpandFolderId] = useState(null);
-  const [availableTags, setAvailableTags] = useState([
-    { id: 'ui', name: 'UI', color: '#0ea5e9' },
-    { id: 'api', name: 'API', color: '#10b981' },
-    { id: 'regression', name: 'Regression', color: '#f59e0b' },
-    { id: 'security', name: 'Security', color: '#ef4444' },
-  ]);
+  
   // Filters/Search
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterPriority, setFilterPriority] = useState('all');
   const [filterTestType, setFilterTestType] = useState('all');
-  const [selectedTagFilterIds, setSelectedTagFilterIds] = useState([]);
+  
   const [orgTypes, setOrgTypes] = useState([]);
 
-  const resolveTags = (tagIds, tagsSnapshot = null) => {
-    if (!Array.isArray(tagIds)) return [];
-    if (tagsSnapshot && typeof tagsSnapshot === 'object') {
-      return tagIds.map((id) => {
-        const snap = tagsSnapshot[id];
-        if (snap) return { id: snap.id || id, name: snap.name || id, color: snap.color || '#64748b' };
-        return { id, name: id, color: '#64748b' };
-      });
-    }
-    const map = new Map(availableTags.map(t => [t.id, t]));
-    return tagIds.map(id => map.get(id) || { id, name: id, color: '#64748b' });
-  };
+  
 
-  const buildTagsSnapshot = (tagIds) => {
-    if (!Array.isArray(tagIds)) return {};
-    const byId = new Map(availableTags.map(t => [t.id, t]));
-    const snap = {};
-    tagIds.forEach((id) => {
-      const t = byId.get(id);
-      snap[id] = { id, name: t?.name || id, color: t?.color || '#64748b' };
-    });
-    return snap;
-  };
+  
 
   const organizationId = currentOrganization?.id || currentUserData?.organisationId || '';
 
@@ -85,34 +60,9 @@ const TestCasesFolder = () => {
     return () => { mounted = false; };
   }, [getProjects, organizationId]);
 
-  // Load organization tags for quick pick
-  useEffect(() => {
-    (async () => {
-      if (!organizationId) return;
-      try {
-        const tags = await tagService.listOrgTags(organizationId);
-        if (Array.isArray(tags) && tags.length > 0) setAvailableTags(tags);
-      } catch (_) {}
-    })();
-  }, [organizationId]);
+  // Tags removed
 
-  const upsertGlobalTag = async (tag) => {
-    try {
-      const saved = await tagService.upsertOrgTag(organizationId, tag);
-      setAvailableTags((prev) => {
-        const map = new Map(prev.map(t => [t.id, t]));
-        map.set(saved.id, { ...map.get(saved.id), ...saved });
-        return Array.from(map.values());
-      });
-    } catch (_) {}
-  };
-
-  const softDeleteGlobalTag = async (tagId) => {
-    try {
-      await tagService.softDeleteOrgTag(organizationId, tagId);
-      setAvailableTags((prev) => prev.filter(t => t.id !== tagId));
-    } catch (_) {}
-  };
+  
 
   // Default author to current user name/email for new form
   useEffect(() => {
@@ -134,19 +84,15 @@ const TestCasesFolder = () => {
     return () => { alive = false; };
   }, [organizationId]);
 
-  const toggleFilterTag = (tagId) => {
-    setSelectedTagFilterIds((prev) =>
-      prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId]
-    );
-  };
+  
 
   // Clear inline test case window when search/filters change
   useEffect(() => {
-    if (searchTerm || filterStatus !== 'all' || filterPriority !== 'all' || filterTestType !== 'all' || (selectedTagFilterIds && selectedTagFilterIds.length > 0)) {
+    if (searchTerm || filterStatus !== 'all' || filterPriority !== 'all' || filterTestType !== 'all') {
       setSelectedTestCase(null);
       setInlineMode('view');
     }
-  }, [searchTerm, filterStatus, filterPriority, filterTestType, selectedTagFilterIds]);
+  }, [searchTerm, filterStatus, filterPriority, filterTestType]);
 
   return (
     <div className="p-6">
@@ -166,15 +112,11 @@ const TestCasesFolder = () => {
         setFilterTestType={setFilterTestType}
         filterPriority={filterPriority}
         setFilterPriority={setFilterPriority}
-        availableTags={availableTags}
-        selectedTagIds={selectedTagFilterIds}
-        onToggleTag={toggleFilterTag}
+        
         orgTypes={orgTypes}
         onList={() => navigate('/test-cases', { state: { viewMode: 'list' }, replace: true })}
         onGrid={() => navigate('/test-cases', { state: { viewMode: 'grid' }, replace: true })}
         onFolder={() => {}}
-        onAddGlobalTag={upsertGlobalTag}
-        onDeleteGlobalTag={softDeleteGlobalTag}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -192,7 +134,7 @@ const TestCasesFolder = () => {
             filterStatus={filterStatus}
             filterPriority={filterPriority}
             filterTestType={filterTestType}
-            selectedTagIds={selectedTagFilterIds}
+            selectedTagIds={[]}
             organizationUsers={[]}
           />
         </div>
@@ -218,7 +160,7 @@ const TestCasesFolder = () => {
               const members = project?.members || [];
               return members;
             })()}
-            availableTags={availableTags}
+            
           />
         </div>
       </div>
@@ -244,8 +186,7 @@ const TestCasesFolder = () => {
               tcid: (form.tcid || '').trim() || makeTcid(form.name),
               author: form.author || me,
               folderId: selectedFolder.id,
-              tags: Array.isArray(form.tags) ? form.tags : [],
-              tags_snapshot: buildTagsSnapshot(Array.isArray(form.tags) ? form.tags : []),
+              
             };
             await testCaseService.createTestCase(organizationId, projectId, payload);
             push({ variant: 'success', message: `Test Case <${payload.tcid}: ${payload.name}> was successfully added to the database` });
@@ -258,9 +199,7 @@ const TestCasesFolder = () => {
         }}
         onClose={() => setShowNew(false)}
         projectMembers={[]}
-        onAddGlobalTag={upsertGlobalTag}
-        onDeleteGlobalTag={softDeleteGlobalTag}
-        availableTags={availableTags}
+        
       />
 
       {/* Legacy modals disabled by inline panel for this screen */}

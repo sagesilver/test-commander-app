@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import DefectsGrid from '../components/DefectsGrid';
-import TagMultiSelect from '../components/TagMultiSelect';
-import TagPills from '../components/TagPills';
+ 
+ 
 import { 
   Plus, 
   AlertTriangle,
@@ -508,13 +508,7 @@ const Defects = () => {
                 </div>
               </div>
 
-              {/* Tags */}
-              <TagMultiSelect
-                availableTags={availableTags}
-                value={newDefectForm.tags}
-                onChange={(ids) => setNewDefectForm(prev => ({ ...prev, tags: ids }))}
-                onAddTag={addOrUpdateTag}
-              />
+              
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -905,13 +899,7 @@ const Defects = () => {
                 </div>
               </div>
 
-              {/* Tags */}
-              <TagMultiSelect
-                availableTags={availableTags}
-                value={editDefectForm.tags}
-                onChange={(ids) => setEditDefectForm(prev => ({ ...prev, tags: ids }))}
-                onAddTag={addOrUpdateTag}
-              />
+              
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>

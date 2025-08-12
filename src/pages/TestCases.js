@@ -28,8 +28,6 @@ import {
  } from 'lucide-react';
 import TestCasesGrid from '../components/TestCasesGrid';
 import TestCasesListView from '../components/testcases/TestCasesListView';
-import TagPills from '../components/TagPills';
-import TagMultiSelect from '../components/TagMultiSelect';
 import ExportMenu from '../components/ExportMenu';
 import TestCasesTop from '../components/testcases/TestCasesTop';
 import TestTypeSelect from '../components/testcases/TestTypeSelect';
@@ -42,7 +40,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { testCaseService } from '../services/testCaseService';
 import { useToast } from '../components/Toast';
 import { projectsService } from '../services/projectsService';
-import { tagService } from '../services/tagService';
+ 
 
 const TestCases = () => {
   const { currentUserData, currentOrganization, getUsers } = useAuth();
@@ -60,13 +58,7 @@ const TestCases = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterPriority, setFilterPriority] = useState('all');
   const [filterTestType, setFilterTestType] = useState('all');
-  const [availableTags, setAvailableTags] = useState([
-    { id: 'ui', name: 'UI', color: '#0ea5e9' },
-    { id: 'api', name: 'API', color: '#10b981' },
-    { id: 'regression', name: 'Regression', color: '#f59e0b' },
-    { id: 'security', name: 'Security', color: '#ef4444' },
-  ]);
-  const [selectedTagFilterIds, setSelectedTagFilterIds] = useState([]);
+  
   const [testCases, setTestCases] = useState([]);
   const [loading, setLoading] = useState(false);
   const [orgTypes, setOrgTypes] = useState([]);
@@ -124,21 +116,7 @@ const TestCases = () => {
     }
   }, [currentUserData]);
 
-  // Load organization tags
-  useEffect(() => {
-    // Load organization tags
-    (async () => {
-      if (!currentOrganization?.id) return;
-      try {
-        const tags = await tagService.listOrgTags(currentOrganization.id);
-        if (Array.isArray(tags) && tags.length > 0) {
-          setAvailableTags(tags);
-        }
-      } catch (_) {
-        // fallback to defaults already set
-      }
-    })();
-  }, [currentOrganization?.id]);
+  // Tags removed
 
   const loadTestCases = async () => {
     try {
@@ -211,27 +189,12 @@ const TestCases = () => {
         return { id, name: id, color: '#64748b' };
       });
     }
-    const byId = new Map(availableTags.map(t => [t.id, t]));
-    return tagIds.map((id) => byId.get(id) || { id, name: id, color: '#64748b' });
+    return [];
   };
 
-  const addOrUpdateTag = (tag) => {
-    setAvailableTags(prev => {
-      const existing = prev.find(t => t.id === tag.id);
-      if (existing) {
-        return prev.map(t => t.id === tag.id ? tag : t);
-      }
-      return [...prev, tag];
-    });
-  };
+  // Tags removed
 
-  const toggleFilterTag = (tagId) => {
-    setSelectedTagFilterIds(prev => 
-      prev.includes(tagId) 
-        ? prev.filter(id => id !== tagId)
-        : [...prev, tagId]
-    );
-  };
+  
 
   const handleViewTestCase = (testCase) => {
     setSelectedTestCase(testCase);
@@ -297,17 +260,7 @@ const TestCases = () => {
 
   const buildTagsSnapshot = (tagIds) => {
     if (!Array.isArray(tagIds)) return {};
-    const byId = new Map(availableTags.map(t => [t.id, t]));
-    const snapshot = {};
-    tagIds.forEach((id) => {
-      const t = byId.get(id);
-      snapshot[id] = {
-        id,
-        name: t?.name || id,
-        color: t?.color || '#64748b',
-      };
-    });
-    return snapshot;
+    return {};
   };
 
   const handleNewTestCaseSubmit = async (formData) => {
@@ -375,16 +328,7 @@ const TestCases = () => {
         : prev));
       // Keep selected copy in sync if open elsewhere
       setSelectedTestCase((prev) => (prev && prev.id === id ? { ...prev, ...withSnapshot } : prev));
-      // Merge any newly used tag ids into availableTags so they render immediately
-      if (Array.isArray(withSnapshot?.tags) && withSnapshot.tags.length > 0) {
-        setAvailableTags((prev) => {
-          const seen = new Set(prev.map(t => t.id));
-          const additions = withSnapshot.tags
-            .filter(id => !seen.has(id))
-            .map(id => ({ id, name: id, color: '#64748b' }));
-          return additions.length > 0 ? [...prev, ...additions] : prev;
-        });
-      }
+      
       push({ variant: 'success', message: 'Test case updated successfully' });
       // Notify list view to reload expanded rows without full page refresh
       setListRefreshKey((k) => k + 1);
@@ -700,43 +644,14 @@ const TestCases = () => {
     }
 
     // Tag filter
-    if (selectedTagFilterIds.length > 0) {
-      const selectedSet = new Set(selectedTagFilterIds);
-      filtered = filtered.filter(tc => 
-        Array.isArray(tc.tags) && tc.tags.some(id => selectedSet.has(id))
-      );
-    }
+    
     
     return filtered;
   };
 
   const filteredTestCases = getFilteredTestCases();
 
-  const upsertGlobalTag = async (tag) => {
-    if (!tag || !currentOrganization?.id) return;
-    try {
-      const saved = await tagService.upsertOrgTag(currentOrganization.id, tag);
-      setAvailableTags((prev) => {
-        const map = new Map(prev.map(t => [t.id, t]));
-        map.set(saved.id, { ...map.get(saved.id), ...saved });
-        return Array.from(map.values());
-      });
-    } catch (e) {
-      console.error('Failed to upsert tag', e);
-    }
-  };
-
-  const softDeleteGlobalTag = async (tagId) => {
-    if (!tagId || !currentOrganization?.id) return;
-    try {
-      await tagService.softDeleteOrgTag(currentOrganization.id, tagId);
-      // Remove from available list used by selectors
-      setAvailableTags((prev) => prev.filter(t => t.id !== tagId));
-      // No need to change existing test cases (snapshot fallback later if needed)
-    } catch (e) {
-      console.error('Failed to delete tag', e);
-    }
-  };
+  // Tags removed
 
   return (
     <div className="min-h-screen bg-surface">
@@ -767,21 +682,18 @@ const TestCases = () => {
           setFilterTestType={setFilterTestType}
           filterPriority={filterPriority}
           setFilterPriority={setFilterPriority}
-          availableTags={availableTags}
-          selectedTagIds={selectedTagFilterIds}
-          onToggleTag={toggleFilterTag}
+          
           orgTypes={orgTypes}
           onList={() => setViewMode('list')}
           onGrid={() => setViewMode('grid')}
           onFolder={() => navigate('/test-cases-folder', { state: { viewMode: 'folder' }, replace: true })}
-          onAddGlobalTag={upsertGlobalTag}
-          onDeleteGlobalTag={softDeleteGlobalTag}
+          
         />
 
         {/* Content */}
         <div className="bg-card rounded-lg shadow-card border border-subtle">
           {viewMode === 'list' ? (
-            <TestCasesListView
+           <TestCasesListView
               organizationId={currentOrganization.id}
               projects={projects}
               selectedProjectId={selectedProjectId}
@@ -790,7 +702,7 @@ const TestCases = () => {
               filterStatus={filterStatus}
               filterPriority={filterPriority}
               filterTestType={filterTestType}
-              selectedTagIds={selectedTagFilterIds}
+           selectedTagIds={[]}
               resolveTags={resolveTags}
               onViewTestCase={handleViewTestCase}
               onEditTestCase={handleEditTestCase}
@@ -808,7 +720,7 @@ const TestCases = () => {
               onBulkEdit={handleBulkEdit}
               onBulkDelete={handleBulkDelete}
               resolveTags={resolveTags}
-              onFilterByTag={(id) => toggleFilterTag(id)}
+               
               organizationUsers={organizationUsers}
             />
           )}
@@ -827,9 +739,8 @@ const TestCases = () => {
           onSubmit={handleNewTestCaseSubmit}
           onClose={() => setShowNewTestCaseModal(false)}
           projectMembers={organizationUsers}
-          onAddGlobalTag={upsertGlobalTag}
-          onDeleteGlobalTag={softDeleteGlobalTag}
-          availableTags={availableTags}
+           
+           
         />
       )}
 
@@ -848,9 +759,8 @@ const TestCases = () => {
             setEditTestCaseForm({});
           }}
           projectMembers={organizationUsers}
-          onAddGlobalTag={upsertGlobalTag}
-          onDeleteGlobalTag={softDeleteGlobalTag}
-          availableTags={availableTags}
+          
+           
         />
       )}
 

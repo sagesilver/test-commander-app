@@ -42,18 +42,11 @@ service cloud.firestore {
 
     // Users collection
     match /users/{userId} {
-      // Org members can read user profiles within their organization (to support author pickers, mentions, etc.)
-      allow read: if isAppAdmin() ||
-                    (isAuthenticated() && (request.auth.uid == userId || resource.data.email == request.auth.token.email)) ||
-                    (isOrgAdmin(resource.data.organisationId)) ||
-                    (isOrgMember(resource.data.organisationId));
-      allow create: if isAppAdmin() || 
-                      (isOrgAdmin(request.resource.data.organisationId));
-      allow update: if isAppAdmin() || 
-                      (request.auth.uid == userId || resource.data.email == request.auth.token.email) ||
-                      (isOrgAdmin(resource.data.organisationId));
-      allow delete: if isAppAdmin() || 
-                      (isOrgAdmin(resource.data.organisationId));
+      // Reverted: restrict reads and writes per previous RBAC scope
+      allow read: if isAppAdmin() || (request.auth != null && request.auth.uid == userId) || isOrgAdmin(resource.data.organisationId);
+      allow create: if isAppAdmin() || isOrgAdmin(request.resource.data.organisationId);
+      allow update: if isAppAdmin() || isOrgAdmin(resource.data.organisationId);
+      allow delete: if isAppAdmin() || isOrgAdmin(resource.data.organisationId);
     }
 
     // Global Test Types catalog (read-only for all authenticated users; write App Admin only)

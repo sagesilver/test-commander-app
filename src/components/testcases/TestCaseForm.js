@@ -2,10 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { Info, ClipboardList, ListChecks, Plus, ListOrdered } from 'lucide-react';
 import { testTypeService } from '../../services/testTypeService';
 import TestTypeSelect from './TestTypeSelect';
-import TagMultiSelect from '../TagMultiSelect';
-import TagPills from '../TagPills';
+ 
 import RichTextEditor from '../common/RichTextEditor';
 import RichTextViewer from '../common/RichTextViewer';
+ 
 
 export default function TestCaseForm({
   organizationId,
@@ -24,18 +24,9 @@ export default function TestCaseForm({
 }) {
   const isReadOnly = mode === 'view';
   const [orgTypes, setOrgTypes] = useState([]);
-  const [availableTags, setAvailableTags] = useState([
-    { id: 'ui', name: 'UI', color: '#0ea5e9' },
-    { id: 'api', name: 'API', color: '#10b981' },
-    { id: 'regression', name: 'Regression', color: '#f59e0b' },
-    { id: 'security', color: '#ef4444' },
-  ]);
+  
 
-  useEffect(() => {
-    if (Array.isArray(availableTagsProp) && availableTagsProp.length > 0) {
-      setAvailableTags(availableTagsProp);
-    }
-  }, [availableTagsProp]);
+  
 
   useEffect(() => {
     let alive = true;
@@ -49,21 +40,9 @@ export default function TestCaseForm({
     return () => { alive = false; };
   }, [organizationId]);
 
-  const addOrUpdateTag = (tag) => {
-    setAvailableTags(prev => {
-      const existing = prev.find(t => t.id === tag.id);
-      if (existing) {
-        return prev.map(t => t.id === tag.id ? tag : t);
-      }
-      return [...prev, tag];
-    });
-  };
+  
 
-  const mergedAvailableForDisplay = (() => {
-    const map = new Map((availableTags || []).map(t => [t.id, t]));
-    (form?.tags || []).forEach(id => { if (!map.has(id)) map.set(id, { id, name: id, color: '#64748b' }); });
-    return Array.from(map.values());
-  })();
+  
 
   return (
     <form onSubmit={onSubmit} className={`tc-testcase-form ${mode === 'create' ? 'tc-testcase-new' : 'tc-testcase-edit'} space-y-6`}>
@@ -196,25 +175,7 @@ export default function TestCaseForm({
         </div>
       </div>
 
-      <div>
-        <div className="flex items-center gap-2 mb-2">
-          <ClipboardList className="h-5 w-5 text-[rgb(var(--tc-icon))]" />
-          <h4 className="text-lg font-medium text-foreground">Tags</h4>
-        </div>
-        {isReadOnly ? (
-          <div className="input-field bg-white/5 cursor-default select-text">
-            <TagPills tags={mergedAvailableForDisplay.filter(t => (form.tags || []).includes(t.id))} size="sm" />
-          </div>
-        ) : (
-          <TagMultiSelect
-            availableTags={mergedAvailableForDisplay}
-            value={form.tags || []}
-            onChange={(ids) => onChange({ tags: ids })}
-            onAddTag={addOrUpdateTag}
-            label="Tags"
-          />
-        )}
-      </div>
+      
 
       <div>
         <div className="flex items-center gap-2 mb-2">

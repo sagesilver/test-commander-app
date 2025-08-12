@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useToast } from './Toast';
 import DataTable from './table/DataTable';
-import TagPills from './TagPills';
 import { resolveUserName } from '../utils/textUtils';
 import { 
   Search, 
@@ -50,10 +49,6 @@ const TestCasesGrid = ({
     }
     
     return testCases.map((testCase, index) => {
-      const tagsResolved = typeof resolveTags === 'function' ? resolveTags(testCase.tags) : [];
-      const tagsText = Array.isArray(tagsResolved) && tagsResolved.length > 0
-        ? tagsResolved.map(t => t.name).join(', ')
-        : '';
       return ({
       id: index, // MUI DataGrid requires unique id field
       tcid: testCase.tcid || '',
@@ -64,9 +59,7 @@ const TestCasesGrid = ({
       priority: testCase.priority || 'Medium',
       overallResult: testCase.overallResult || 'Not Run',
       stepsCount: Array.isArray(testCase.testSteps) ? testCase.testSteps.length : 0,
-        tags: Array.isArray(testCase.tags) ? testCase.tags : [],
-        tagsResolved,
-        tagsText,
+        
       // Store original data for actions
         originalData: testCase
       });
@@ -243,20 +236,7 @@ const TestCasesGrid = ({
       enableSorting: true,
       filterType: 'text',
     },
-    {
-      id: 'tags',
-      header: 'Tags',
-      accessorKey: 'tagsText',
-      size: 240,
-      cell: ({ row }) => (
-        <TagPills
-          tags={row.original.tagsResolved}
-          onTagClick={(tag) => onFilterByTag?.(tag.id)}
-        />
-      ),
-      enableSorting: false,
-      filterType: 'text',
-    },
+    
     {
       id: 'actions',
       header: 'Actions',

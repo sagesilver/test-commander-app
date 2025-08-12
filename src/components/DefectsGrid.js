@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import DataTable from './table/DataTable';
-import TagPills from './TagPills';
+ 
 import { 
   AlertTriangle,
   ArrowUp,
@@ -19,10 +19,6 @@ const DefectsGrid = ({ defects, onViewDefect, onEditDefect, onDeleteDefect, reso
   // Transform defects data for the grid
   const gridData = useMemo(() => {
     return defects.map((defect) => {
-      const tagsResolved = typeof resolveTags === 'function' ? resolveTags(defect.tags) : [];
-      const tagsText = Array.isArray(tagsResolved) && tagsResolved.length > 0
-        ? tagsResolved.map(t => t.name).join(', ')
-        : '';
       return ({
         id: defect.id,
         title: defect.title,
@@ -41,9 +37,6 @@ const DefectsGrid = ({ defects, onViewDefect, onEditDefect, onDeleteDefect, reso
         environment: defect.environment,
         browser: defect.browser,
         os: defect.os,
-        tags: Array.isArray(defect.tags) ? defect.tags : [],
-        tagsResolved,
-        tagsText,
         // Store original data for actions
         originalData: defect
       });
@@ -194,19 +187,6 @@ const DefectsGrid = ({ defects, onViewDefect, onEditDefect, onDeleteDefect, reso
     { id: 'project', header: 'Project', accessorKey: 'project', size: 160, cell: ({ getValue }) => (<span className="text-sm text-foreground">{getValue()}</span>), filterType: 'text' },
     {
       id: 'module', header: 'Module', accessorKey: 'module', size: 140, cell: ({ getValue }) => (<span className="text-sm text-foreground">{getValue()}</span>), filterType: 'text'
-    },
-    {
-      id: 'tags',
-      header: 'Tags',
-      accessorKey: 'tagsText',
-      size: 240,
-      cell: ({ row }) => (
-        <TagPills
-          tags={row.original.tagsResolved}
-          onTagClick={(tag) => onFilterByTag?.(tag.id)}
-        />
-      ),
-      filterType: 'text',
     },
     {
       id: 'updatedDate',

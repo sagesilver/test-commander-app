@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { testCaseService } from '../../services/testCaseService';
 import TestCaseForm from './TestCaseForm';
 
-export default function InlineTestCasePanel({ testCase, mode = 'view', onModeChange, onSave, projectMembers = [], availableTags = [] }) {
+export default function InlineTestCasePanel({ testCase, mode = 'view', onModeChange, onSave, projectMembers = [] }) {
   const [local, setLocal] = useState(null);
   const { currentUserData, currentOrganization } = useAuth();
 
@@ -67,7 +67,6 @@ export default function InlineTestCasePanel({ testCase, mode = 'view', onModeCha
         submitLabel={isView ? '' : 'Save Changes'}
         showActions={!isView}
         projectMembers={projectMembers}
-        availableTags={availableTags}
       />
     </div>
   );

@@ -182,8 +182,17 @@ export const AuthProvider = ({ children }) => {
         } else {
           return await getAllUsers();
         }
-      } else if (currentUserData?.roles?.includes(USER_ROLES.ORG_ADMIN)) {
-        // Org Admin can only see users in their organization
+      } else if (
+        currentUserData?.roles?.includes(USER_ROLES.ORG_ADMIN) ||
+        currentUserData?.roles?.includes(USER_ROLES.PROJECT_MANAGER)
+      ) {
+        // Org Admin and Project Manager can see all users in their organization
+        const orgId = organizationId || currentUserData?.organisationId || null;
+        if (orgId) return await getUsersByOrganization(orgId);
+        return [];
+      }
+      // Default: if user belongs to an organization, return org users
+      if (currentUserData?.organisationId) {
         return await getUsersByOrganization(currentUserData.organisationId);
       }
       return [];

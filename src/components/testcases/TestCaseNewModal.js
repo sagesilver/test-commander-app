@@ -4,7 +4,7 @@ import { X, Info, ClipboardList, ListChecks, Plus, ListOrdered } from 'lucide-re
 import { useAuth } from '../../contexts/AuthContext';
 import { testTypeService } from '../../services/testTypeService';
 import TestTypeSelect from './TestTypeSelect';
-import TagMultiSelect from '../TagMultiSelect';
+ 
 import RichTextEditor from '../common/RichTextEditor';
 
 export default function TestCaseNewModal({
@@ -16,18 +16,12 @@ export default function TestCaseNewModal({
   onUpdateStep,
   onSubmit,
   onClose,
-  onAddGlobalTag,
-  onDeleteGlobalTag,
-  availableTags: availableTagsProp = [],
+  
   projectMembers = [],
 }) {
   const { currentUserData, currentOrganization } = useAuth();
   const [orgTypes, setOrgTypes] = useState([]);
-  const [availableTags, setAvailableTags] = useState(availableTagsProp);
-
-  useEffect(() => {
-    if (Array.isArray(availableTagsProp)) setAvailableTags(availableTagsProp);
-  }, [availableTagsProp]);
+  
 
   useEffect(() => {
     let alive = true;
@@ -40,16 +34,7 @@ export default function TestCaseNewModal({
     return () => { alive = false; };
   }, [currentUserData, currentOrganization]);
 
-  const addOrUpdateTag = (tag) => {
-    setAvailableTags(prev => {
-      const existing = prev.find(t => t.id === tag.id);
-      if (existing) {
-        return prev.map(t => t.id === tag.id ? tag : t);
-      }
-      return [...prev, tag];
-    });
-    onAddGlobalTag?.(tag);
-  };
+  
 
   if (!open) return null;
 
@@ -139,26 +124,7 @@ export default function TestCaseNewModal({
             </div>
           </div>
 
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <ClipboardList className="h-5 w-5 text-[rgb(var(--tc-icon))]" />
-              <h4 className="text-lg font-medium text-foreground">Tags</h4>
-            </div>
-            <TagMultiSelect
-              availableTags={(() => {
-                const map = new Map((availableTags || []).map(t => [t.id, t]));
-                (form.tags || []).forEach(id => {
-                  if (!map.has(id)) map.set(id, { id, name: id, color: '#64748b' });
-                });
-                return Array.from(map.values());
-              })()}
-              value={form.tags || []}
-              onChange={(ids) => onChange({ tags: ids })}
-              onAddTag={addOrUpdateTag}
-              onDeleteTag={onDeleteGlobalTag}
-              label="Tags"
-            />
-          </div>
+          
 
           <div>
             <div className="flex items-center gap-2 mb-2">

@@ -5,7 +5,6 @@ import { testCaseService } from '../../services/testCaseService';
 import { testTypeService } from '../../services/testTypeService';
 import { resolveUserName } from '../../utils/textUtils';
 import ColoredIcon from './ColoredIcon';
-import TagPills from '../TagPills';
 
 export default function TestCasesListView({
   organizationId,
@@ -247,7 +246,7 @@ export default function TestCasesListView({
   const renderTestCaseRow = (tc) => {
     const type = findType(tc);
     const expanded = expandedRows.has(tc.id);
-    const tagsResolved = typeof resolveTags === 'function' ? resolveTags(tc.tags) : [];
+    // Tags removed
     const stepsCount = Array.isArray(tc.testSteps) ? tc.testSteps.length : 0;
     const history = mockRunHistory(tc);
 
@@ -278,7 +277,6 @@ export default function TestCasesListView({
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <span className={`text-xs px-2 py-0.5 rounded-full ${priorityPill(tc.priority)}`}>{tc.priority || '—'}</span>
                 <span className="text-xs px-2 py-0.5 rounded-full bg-white/5 text-menu">{stepsCount} steps</span>
-                <TagPills tags={tagsResolved} size="sm" />
               </div>
               {expanded && (
                 <div className="mt-2 text-sm text-muted whitespace-pre-wrap">{stripHtml(tc.description || '') || '—'}</div>
