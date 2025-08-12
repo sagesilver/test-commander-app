@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, FolderPlus, List, Grid, Folder as FolderIcon, Trash2 } from 'lucide-react';
+import { Plus, FolderPlus, List, Grid, Folder as FolderIcon, Trash2, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { folderService } from '../services/folderService';
 import { testCaseService } from '../services/testCaseService';
@@ -30,9 +30,14 @@ const TestCasesFolder = () => {
   const [showEdit, setShowEdit] = useState(false);
   const [selectedTestCase, setSelectedTestCase] = useState(null);
   const [inlineMode, setInlineMode] = useState('view');
+  const [showInlinePanel, setShowInlinePanel] = useState(false);
   const [newForm, setNewForm] = useState({ tcid: '', name: '', description: '', author: '', testType: '', overallResult: 'Not Run', prerequisites: '', priority: 'Medium', tags: [], testSteps: [] });
   const [editForm, setEditForm] = useState({ tcid: '', name: '', description: '', author: '', testType: '', overallResult: '', prerequisites: '', priority: 'Medium', tags: [], testSteps: [] });
   const [expandFolderId, setExpandFolderId] = useState(null);
+  const [expandKey, setExpandKey] = useState(0);
+  const [expandOnSelect, setExpandOnSelect] = useState(false);
+  const [expandAllKey, setExpandAllKey] = useState(0);
+  const [collapseAllKey, setCollapseAllKey] = useState(0);
   
   // Filters/Search
   const [searchTerm, setSearchTerm] = useState('');
@@ -56,6 +61,9 @@ const TestCasesFolder = () => {
         ? rows.filter((p) => (p?.status === 'ACTIVE') || (p?.isActive === true))
         : [];
       if (mounted) setProjects(actives);
+      // Default: no specific project selected -> show all roots; hide inline panel
+      if (mounted) setShowInlinePanel(false);
+      if (mounted) setProjectId('');
     })();
     return () => { mounted = false; };
   }, [getProjects, organizationId]);
@@ -96,6 +104,18 @@ const TestCasesFolder = () => {
 
   return (
     <div className="p-6">
+      {/* Global toggle to expand details when hidden */}
+      {!showInlinePanel && (
+        <div className="relative">
+          <button
+            className="absolute right-0 -mt-2 mb-2 p-1 rounded hover:bg-white/10 text-menu hover:text-foreground"
+            title="Show details"
+            onClick={() => setShowInlinePanel(true)}
+          >
+            <ChevronDown className="w-4 h-4" />
+          </button>
+        </div>
+      )}
       <TestCasesTop
         title="Test Cases"
         projects={projects}
@@ -120,49 +140,156 @@ const TestCasesFolder = () => {
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="card lg:col-span-1">
-          <TestCaseTree
-            organizationId={organizationId}
-            projectId={projectId}
-            selectedFolderId={selectedFolder?.id || null}
-            onSelectFolder={(f) => setSelectedFolder(f)}
-            onSelectTestCase={(tc) => { setSelectedTestCase(tc); setInlineMode('view'); }}
-            onOpenTestCase={(tc) => { setSelectedTestCase(tc); setEditForm({ ...editForm, ...tc }); setInlineMode('edit'); }}
-            refreshKey={treeRefreshKey}
-            reloadFolderId={expandFolderId}
-            searchTerm={searchTerm}
-            filterStatus={filterStatus}
-            filterPriority={filterPriority}
-            filterTestType={filterTestType}
-            selectedTagIds={[]}
-            organizationUsers={[]}
-          />
+        <div className={`card relative pt-12 ${showInlinePanel ? 'lg:col-span-1' : 'lg:col-span-3'}`}>
+          {/* Header controls: Add Root, Add Folder, Expand toggle */}
+          <div className="absolute top-2 right-2 flex items-center gap-3">
+            {/* Add Root / Add Folder */}
+            <button
+              className="px-3 py-1.5 text-sm rounded-md bg-white/10 hover:bg-white/20 border border-subtle disabled:opacity-50 inline-flex items-center gap-2"
+              title="Add Root Folder"
+              disabled={!(projectId || selectedFolder?.projectId)}
+              onClick={async () => {
+                const name = (window.prompt('Create root folder name') || '').trim();
+                if (!name) return;
+                try {
+                  const targetProjectId = selectedFolder?.projectId || projectId;
+                  await folderService.createFolder(organizationId, targetProjectId, { name, parentFolderId: null });
+                  setTreeRefreshKey((k) => k + 1);
+                } catch (_) {}
+              }}
+            >
+              <FolderIcon className="w-4 h-4 text-[rgb(var(--tc-icon))]" />
+              <span>Add Root</span>
+            </button>
+            <button
+              className="px-3 py-1.5 text-sm rounded-md bg-white/10 hover:bg-white/20 border border-subtle disabled:opacity-50 inline-flex items-center gap-2"
+              title="Add Subfolder"
+              disabled={!selectedFolder?.id}
+              onClick={async () => {
+                const name = (window.prompt('Create subfolder name') || '').trim();
+                if (!name) return;
+                try {
+                  const targetProjectId = selectedFolder?.projectId || projectId;
+                  await folderService.createFolder(organizationId, targetProjectId, { name, parentFolderId: selectedFolder.id });
+                  setExpandFolderId(selectedFolder.id);
+                  setTreeRefreshKey((k) => k + 1);
+                } catch (_) {}
+              }}
+            >
+              <FolderPlus className="w-4 h-4 text-[rgb(var(--tc-icon))]" />
+              <span>Add Folder</span>
+            </button>
+            <label className="flex items-center select-none" title="Expand or collapse all projects and folders">
+              <input
+                type="checkbox"
+                className="sr-only"
+                checked={expandOnSelect}
+                onChange={(e) => {
+                  const on = e.target.checked;
+                  setExpandOnSelect(on);
+                  if (on) setExpandAllKey((k) => k + 1);
+                  else setCollapseAllKey((k) => k + 1);
+                }}
+              />
+              <span className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${expandOnSelect ? 'bg-green-600' : 'bg-white/10 border border-subtle'}`}>
+                <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${expandOnSelect ? 'translate-x-6' : 'translate-x-1'}`}></span>
+              </span>
+              <span className="ml-2 text-sm text-menu">Expand</span>
+            </label>
+          </div>
+          {projectId ? (
+            <TestCaseTree
+              organizationId={organizationId}
+              projectId={projectId}
+              selectedFolderId={selectedFolder?.id || null}
+              onSelectFolder={(f) => { setSelectedFolder(f); if (expandOnSelect && f?.id) setExpandKey((k) => k + 1); }}
+              onSelectTestCase={(tc) => { setSelectedTestCase(tc); setInlineMode('view'); setShowInlinePanel(true); }}
+              onOpenTestCase={(tc) => { setSelectedTestCase(tc); setEditForm({ ...editForm, ...tc }); setInlineMode('edit'); setShowInlinePanel(true); }}
+              refreshKey={treeRefreshKey}
+              reloadFolderId={expandFolderId}
+              expandTargetFolderId={selectedFolder?.id || null}
+              expandRequestKey={expandKey}
+              expandAllKey={expandAllKey}
+              collapseAllKey={collapseAllKey}
+              inlinePanelOpen={showInlinePanel}
+              enableDragDrop={false}
+              searchTerm={searchTerm}
+              filterStatus={filterStatus}
+              filterPriority={filterPriority}
+              filterTestType={filterTestType}
+              selectedTagIds={[]}
+              organizationUsers={[]}
+            />
+          ) : (
+            <div className="space-y-4">
+              {projects.map((p) => (
+                <div key={p.id || p.projectId}>
+                  {/* Removed project label line per request */}
+                  <TestCaseTree
+                    organizationId={organizationId}
+                    projectId={p.id || p.projectId}
+                    selectedFolderId={null}
+                    onSelectFolder={(f) => { setSelectedFolder(f); if (expandOnSelect && f?.id) setExpandKey((k) => k + 1); }}
+                    onSelectTestCase={(tc) => { setSelectedTestCase(tc); setInlineMode('view'); setShowInlinePanel(true); }}
+                    onOpenTestCase={(tc) => { setSelectedTestCase(tc); setEditForm({ ...editForm, ...tc }); setInlineMode('edit'); setShowInlinePanel(true); }}
+                    refreshKey={treeRefreshKey}
+                    reloadFolderId={expandFolderId}
+                    expandTargetFolderId={selectedFolder?.id || null}
+                    expandRequestKey={expandKey}
+                    expandAllKey={expandAllKey}
+                    collapseAllKey={collapseAllKey}
+                    inlinePanelOpen={showInlinePanel}
+                    enableDragDrop={false}
+                    searchTerm={searchTerm}
+                    filterStatus={filterStatus}
+                    filterPriority={filterPriority}
+                    filterTestType={filterTestType}
+                    selectedTagIds={[]}
+                    organizationUsers={[]}
+                  />
+                </div>
+              ))}
+              {projects.length === 0 && (
+                <div className="text-menu">No projects to display.</div>
+              )}
+            </div>
+          )}
         </div>
-        <div className="card lg:col-span-2">
-          <InlineTestCasePanel
-            testCase={selectedTestCase}
-            mode={inlineMode}
-            onModeChange={setInlineMode}
-            onSave={async (updates) => {
-              try {
+        {showInlinePanel && (
+          <div className="card lg:col-span-2 relative">
+            <button
+              className="absolute top-2 right-2 p-1 rounded hover:bg-white/10 text-menu hover:text-foreground"
+              title="Close details"
+              onClick={() => setShowInlinePanel(false)}
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <InlineTestCasePanel
+              testCase={selectedTestCase}
+              mode={inlineMode}
+              onModeChange={setInlineMode}
+              onSave={async (updates) => {
+                try {
                 if (!selectedTestCase?.id) return;
-                await testCaseService.updateTestCase(organizationId, projectId, selectedTestCase.id, updates);
-                setSelectedTestCase((prev) => (prev ? { ...prev, ...updates } : prev));
-                setInlineMode('view');
-                setTreeRefreshKey((k) => k + 1);
-                push?.({ variant: 'success', message: 'Test case updated successfully' });
-              } catch (err) {
-                push?.({ variant: 'error', message: 'Failed to update test case' });
-              }
-            }}
-            projectMembers={(() => {
-              const project = projects.find(p => p.id === projectId);
-              const members = project?.members || [];
-              return members;
-            })()}
-            
-          />
-        </div>
+                const targetProjectId = selectedTestCase?.projectId || selectedFolder?.projectId || projectId;
+                await testCaseService.updateTestCase(organizationId, targetProjectId, selectedTestCase.id, updates);
+                  setSelectedTestCase((prev) => (prev ? { ...prev, ...updates } : prev));
+                  setInlineMode('view');
+                  setTreeRefreshKey((k) => k + 1);
+                  push?.({ variant: 'success', message: 'Test case updated successfully' });
+                } catch (err) {
+                  push?.({ variant: 'error', message: 'Failed to update test case' });
+                }
+              }}
+              projectMembers={(() => {
+              const effectiveProjectId = selectedTestCase?.projectId || selectedFolder?.projectId || projectId;
+              const project = projects.find(p => p.id === effectiveProjectId);
+                const members = project?.members || [];
+                return members;
+              })()}
+            />
+          </div>
+        )}
       </div>
 
       <TestCaseNewModal
@@ -188,7 +315,8 @@ const TestCasesFolder = () => {
               folderId: selectedFolder.id,
               
             };
-            await testCaseService.createTestCase(organizationId, projectId, payload);
+            const targetProjectId = selectedFolder?.projectId || projectId;
+            await testCaseService.createTestCase(organizationId, targetProjectId, payload);
             push({ variant: 'success', message: `Test Case <${payload.tcid}: ${payload.name}> was successfully added to the database` });
             setShowNew(false);
             setNewForm({ tcid: '', name: '', description: '', author: '', testType: '', overallResult: 'Not Run', prerequisites: '', priority: 'Medium', tags: [], testSteps: [] });

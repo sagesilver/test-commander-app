@@ -78,9 +78,9 @@ export default function TestCaseNewModal({
           <div>
             <div className="flex items-center gap-2 mb-2">
               <ClipboardList className="h-5 w-5 text-[rgb(var(--tc-icon))]" />
-              <h4 className="text-lg font-medium text-foreground">Description/Objective</h4>
+              <h4 className="text-lg font-medium text-foreground">Description</h4>
             </div>
-            <label className="block text-sm font-medium text-foreground mb-2">Description/Objective <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-foreground mb-2">Description <span className="text-red-500">*</span></label>
             <RichTextEditor value={form.description || ''} onChange={(html) => onChange({ description: html })} />
           </div>
 

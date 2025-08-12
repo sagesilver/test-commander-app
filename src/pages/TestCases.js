@@ -6,15 +6,12 @@ import {
   Filter, 
   ChevronDown, 
   ChevronRight,
-  FileText,
   Edit,
   Trash2,
   Copy,
   Eye,
   X,
-  Minus,
   Grid,
-  List,
   Folder as FolderIcon,
   ArrowUp,
   ArrowDown,
@@ -27,7 +24,6 @@ import {
   Info
  } from 'lucide-react';
 import TestCasesGrid from '../components/TestCasesGrid';
-import TestCasesListView from '../components/testcases/TestCasesListView';
 import ExportMenu from '../components/ExportMenu';
 import TestCasesTop from '../components/testcases/TestCasesTop';
 import TestTypeSelect from '../components/testcases/TestTypeSelect';
@@ -54,7 +50,7 @@ const TestCases = () => {
   const [showViewTestCaseModal, setShowViewTestCaseModal] = useState(false);
   const [showEditTestCaseModal, setShowEditTestCaseModal] = useState(false);
   const [selectedTestCase, setSelectedTestCase] = useState(null);
-  const [viewMode, setViewMode] = useState('list'); // 'list' | 'grid' | 'folder'
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'folder'
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterPriority, setFilterPriority] = useState('all');
   const [filterTestType, setFilterTestType] = useState('all');
@@ -101,7 +97,7 @@ const TestCases = () => {
   // Respect navigation state (e.g., from Folder view)
   useEffect(() => {
     const desired = location?.state?.viewMode;
-    if (desired === 'grid' || desired === 'list') {
+    if (desired === 'grid' || desired === 'folder') {
       setViewMode(desired);
     }
   }, [location?.state]);
@@ -608,6 +604,11 @@ const TestCases = () => {
 
   const getFilteredTestCases = () => {
     let filtered = testCases;
+    // Project filter
+    if (selectedProjectId) {
+      const pid = String(selectedProjectId);
+      filtered = filtered.filter(tc => String(tc.projectId) === pid);
+    }
     
     // Search filter
     if (searchTerm) {
@@ -684,7 +685,6 @@ const TestCases = () => {
           setFilterPriority={setFilterPriority}
           
           orgTypes={orgTypes}
-          onList={() => setViewMode('list')}
           onGrid={() => setViewMode('grid')}
           onFolder={() => navigate('/test-cases-folder', { state: { viewMode: 'folder' }, replace: true })}
           
@@ -692,25 +692,7 @@ const TestCases = () => {
 
         {/* Content */}
         <div className="bg-card rounded-lg shadow-card border border-subtle">
-          {viewMode === 'list' ? (
-           <TestCasesListView
-              organizationId={currentOrganization.id}
-              projects={projects}
-              selectedProjectId={selectedProjectId}
-              refreshKey={listRefreshKey}
-              searchTerm={searchTerm}
-              filterStatus={filterStatus}
-              filterPriority={filterPriority}
-              filterTestType={filterTestType}
-           selectedTagIds={[]}
-              resolveTags={resolveTags}
-              onViewTestCase={handleViewTestCase}
-              onEditTestCase={handleEditTestCase}
-              onDuplicateTestCase={handleDuplicateTestCase}
-              onDeleteTestCase={handleDeleteTestCase}
-              organizationUsers={organizationUsers}
-            />
-          ) : (
+          {viewMode === 'grid' ? (
             <TestCasesGrid
               testCases={filteredTestCases}
               onViewTestCase={handleViewTestCase}
@@ -723,7 +705,7 @@ const TestCases = () => {
                
               organizationUsers={organizationUsers}
             />
-          )}
+          ) : null}
         </div>
       </div>
 

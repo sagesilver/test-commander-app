@@ -1,5 +1,5 @@
 import React from 'react';
-import { Grid, Folder as FolderIcon, Plus, Search, FileText } from 'lucide-react';
+import { Grid, Folder as FolderIcon, Plus, Search } from 'lucide-react';
 import ExportMenu from '../ExportMenu';
  
 
@@ -22,7 +22,6 @@ export default function TestCasesTop({
   setFilterPriority,
   
   orgTypes = [],
-  onList,
   onGrid,
   onFolder,
 }) {
@@ -36,19 +35,7 @@ export default function TestCasesTop({
             <p className="mt-2 text-muted">Manage and organize your test cases</p>
           </div>
           <div className="flex items-center gap-3">
-            <select
-              value={selectedProjectId || ''}
-              onChange={(e) => onChangeProject?.(e.target.value || null)}
-              className="input-field h-10 !py-2"
-            >
-              <option value="">{projects.length === 0 ? 'No projects' : 'All Projects'}</option>
-              {projects.map(p => (
-                <option key={p.id || p.projectId} value={p.id || p.projectId}>{p.name || p.projectName}</option>
-              ))}
-            </select>
-
             <ExportMenu data={exportData} filename={exportFilename} onExport={() => {}} />
-
             <button
               onClick={onClickNew}
               disabled={newDisabled}
@@ -63,7 +50,7 @@ export default function TestCasesTop({
 
       {/* Filters */}
       <div className="bg-card rounded-lg shadow-card border border-subtle p-6 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-menu" />
             <input
@@ -74,6 +61,18 @@ export default function TestCasesTop({
               className="input-field pl-10"
             />
           </div>
+
+          {/* Move project selector here: to the right of Search and left of Status */}
+          <select
+            value={selectedProjectId || ''}
+            onChange={(e) => onChangeProject?.(e.target.value || null)}
+            className="input-field"
+          >
+            <option value="">{projects.length === 0 ? 'No projects' : 'All Projects'}</option>
+            {projects.map(p => (
+              <option key={p.id || p.projectId} value={p.id || p.projectId}>{p.name || p.projectName}</option>
+            ))}
+          </select>
 
           <select value={filterStatus} onChange={(e) => setFilterStatus?.(e.target.value)} className="input-field">
             <option value="all">All Statuses</option>
@@ -103,9 +102,6 @@ export default function TestCasesTop({
       {/* View toggles */}
       <div className="flex items-center justify-end mb-4">
         <div className="flex bg-surface-muted rounded-lg p-1 border border-subtle">
-          <button onClick={onList} className="p-2 rounded-md transition-colors text-menu hover:text-white" title="List View" data-testid="tc-top-list">
-            <FileText className="w-4 h-4" />
-          </button>
           <button onClick={onGrid} className="p-2 rounded-md transition-colors text-menu hover:text-white" title="Grid View" data-testid="tc-top-grid">
             <Grid className="w-4 h-4" />
           </button>

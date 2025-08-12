@@ -22,6 +22,7 @@ export default function TestCasesListView({
   onDuplicateTestCase,
   onDeleteTestCase,
   organizationUsers = [],
+  defaultExpandProjects = false,
 }) {
   const [expanded, setExpanded] = useState(new Set());
   const [projectChildren, setProjectChildren] = useState(new Map()); // projectId -> root nodes
@@ -97,6 +98,31 @@ export default function TestCasesListView({
     setProjectChildren(new Map());
     setFolderChildren(new Map());
   }, [organizationId, selectedProjectId]);
+
+  // When showing all projects, optionally expand each project's root
+  useEffect(() => {
+    (async () => {
+      if (!defaultExpandProjects) return;
+      if (selectedProjectId) return;
+      if (!Array.isArray(projects) || projects.length === 0) return;
+      // Expand all projects and ensure their root nodes are loaded
+      const next = new Set();
+      for (const p of projects) {
+        const pid = p.id || p.projectId;
+        if (!pid) continue;
+        next.add(`project:${pid}`);
+        if (!projectChildren.has(pid)) {
+          setBusy(true);
+          try { // eslint-disable-next-line no-await-in-loop
+            await loadRootForProject(pid);
+          } finally {
+            setBusy(false);
+          }
+        }
+      }
+      setExpanded(next);
+    })();
+  }, [defaultExpandProjects, selectedProjectId, projects]);
 
   // Load organization test types for icons/names
   useEffect(() => {

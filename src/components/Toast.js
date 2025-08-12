@@ -12,8 +12,8 @@ export function ToastProvider({ children }) {
   return (
     <ToastContext.Provider value={{ push }}>
       {children}
-      {/* Toast container positioned below page titles */}
-      <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 space-y-2 max-w-md">
+      {/* Toast container positioned under navigation, top-left */}
+      <div className="fixed top-16 left-6 z-50 space-y-2 max-w-md">
         {toasts.map((t) => (
           <div key={t.id} className={`flex items-center gap-2 px-4 py-2 rounded-lg border shadow-lg ${t.variant === 'success' ? 'bg-emerald-900/20 border-emerald-700 text-emerald-200' : 'bg-white/10 border-white/20 text-white'}`}>
             {t.icon || (
