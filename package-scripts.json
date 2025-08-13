@@ -1,0 +1,12 @@
+{
+  "name": "test-commander-scripts",
+  "version": "1.0.0",
+  "description": "Utility scripts for Test Commander",
+  "private": true,
+  "scripts": {
+    "fix-test-types": "node fixTestTypeNames.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.0.0"
+  }
+}

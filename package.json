@@ -4,23 +4,24 @@
   "description": "Modern test case and defect management platform",
   "private": true,
   "dependencies": {
-    "papaparse": "^5.4.1",
-    "xlsx": "^0.18.5",
-    "file-saver": "^2.0.5",
     "@tanstack/react-table": "^8.14.1",
     "@tanstack/react-virtual": "^3.0.0",
+    "browser-image-compression": "^2.0.2",
+    "dompurify": "^3.1.6",
+    "dotenv": "^16.4.5",
+    "file-saver": "^2.0.5",
     "firebase": "^9.23.0",
+    "firebase-admin": "^13.4.0",
     "framer-motion": "^6.3.0",
     "lucide-react": "^0.263.1",
+    "papaparse": "^5.4.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-quill": "^2.0.0",
     "react-router-dom": "^6.3.0",
     "recharts": "^2.1.0",
     "serve": "^14.2.1",
-    "dotenv": "^16.4.5",
-    "react-quill": "^2.0.0",
-    "browser-image-compression": "^2.0.2",
-    "dompurify": "^3.1.6"
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/react": "^18.0.0",
@@ -39,7 +40,11 @@
     "serve": "serve -s build -l 3000",
     "build:serve": "npm run build:fast && npm run serve",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "fix-test-types": "node fixTestTypeNames.js",
+    "fix-test-types-cli": "node fixTestTypeNamesCLI.js",
+    "fix-test-types-simple": "node fixTestTypeNamesSimple.js",
+    "fix-test-types-firebase": "node fixTestTypeNamesFirebase.js"
   },
   "eslintConfig": {
     "extends": [

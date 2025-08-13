@@ -299,14 +299,14 @@ const TestImport = () => {
   if (organizations.length === 0) {
     return (
       <div className="p-6">
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-          <h2 className="text-amber-800 font-semibold">No Organizations Available</h2>
-          <p className="text-amber-600 mb-3">
+        <div className="bg-amber-900/20 border border-amber-700/50 rounded-lg p-4">
+          <h2 className="text-amber-300 font-semibold">No Organizations Available</h2>
+          <p className="text-amber-200 mb-3">
             No organizations found in the system. As an App Admin, you need to create at least one organization to test the import functionality.
           </p>
           <div className="space-y-2 text-sm">
-            <p className="font-medium">To proceed, you can:</p>
-            <ul className="list-disc list-inside ml-4 space-y-1">
+            <p className="font-medium text-amber-100">To proceed, you can:</p>
+            <ul className="list-disc list-inside ml-4 space-y-1 text-amber-200">
               <li>Go to the Organizations section and create a new organization</li>
               <li>Or use the Firebase console to create an organization manually</li>
               <li>Or run the organization setup script if available</li>
@@ -351,13 +351,13 @@ const TestImport = () => {
       {alert.show && (
         <div className={`p-4 rounded-lg mb-6 flex items-center space-x-2 ${
           alert.severity === 'success' 
-            ? 'bg-green-50 text-green-800 border border-green-200' 
-            : 'bg-red-50 text-red-800 border border-red-200'
+            ? 'bg-emerald-900/20 text-emerald-300 border border-emerald-700/50' 
+            : 'bg-red-900/20 text-red-300 border border-red-700/50'
         }`}>
           <span>{alert.message}</span>
           <button
             onClick={() => setAlert({ ...alert, show: false })}
-            className="ml-auto text-gray-400 hover:text-gray-600"
+            className="ml-auto text-muted hover:text-foreground transition-colors"
           >
             <X className="h-4 w-4" />
           </button>
@@ -414,7 +414,7 @@ const TestImport = () => {
                   <span className="font-medium text-[rgb(var(--tc-icon))]">{availableTestTypes.length}</span>
                   <span className="text-muted ml-1">(Organization + Global enabled only)</span>
                   {availableTestTypes.length === 0 && (
-                    <span className="text-amber-600 ml-2">⚠️ No enabled test types found</span>
+                    <span className="text-amber-400 ml-2">⚠️ No enabled test types found</span>
                   )}
                 </div>
               )}
@@ -423,8 +423,8 @@ const TestImport = () => {
 
           {/* Generate Button Help */}
           {selectedOrganizationId && availableTestTypes.length === 0 && (
-            <div className="p-3 border border-amber-200 rounded-lg bg-amber-50">
-              <div className="text-sm text-amber-800">
+            <div className="p-3 border border-amber-700/50 rounded-lg bg-amber-900/20">
+              <div className="text-sm text-amber-300">
                 <p className="font-medium mb-1">⚠️ Cannot Generate Test Data</p>
                 <p>No enabled test types found. As an App Admin, you can:</p>
                 <ul className="list-disc list-inside mt-1 ml-2 space-y-1">
@@ -439,16 +439,30 @@ const TestImport = () => {
           {/* Number of Tests Slider */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">
-              Number of Test Cases: {numTests}
+              Number of Test Cases
             </label>
-            <input
-              type="range"
-              min="1"
-              max="1000"
-              value={numTests}
-              onChange={(e) => setNumTests(parseInt(e.target.value))}
-              className="w-full h-2 bg-subtle rounded-lg appearance-none cursor-pointer"
-            />
+            <div className="flex items-center gap-4">
+              <input
+                type="range"
+                min="1"
+                max="1000"
+                value={numTests}
+                onChange={(e) => setNumTests(parseInt(e.target.value))}
+                className="flex-1 h-2 bg-subtle rounded-lg appearance-none cursor-pointer"
+              />
+              <input
+                type="number"
+                min="1"
+                max="1000"
+                value={numTests}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value) || 1;
+                  const clampedValue = Math.max(1, Math.min(1000, value));
+                  setNumTests(clampedValue);
+                }}
+                className="w-20 input-field text-center"
+              />
+            </div>
             <div className="flex justify-between text-xs text-muted mt-1">
               <span>1</span>
               <span>1000</span>

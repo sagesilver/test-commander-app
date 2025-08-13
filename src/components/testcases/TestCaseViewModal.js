@@ -74,7 +74,7 @@ export default function TestCaseViewModal({ open, testCase, onClose, resolveTags
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">Test Type</label>
-                  <input disabled className="input-field" value={testCase.testType || ''} />
+                  <input disabled className="input-field" value={testCase.testTypeName || testCase.testType || ''} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">Priority</label>
