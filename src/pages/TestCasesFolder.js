@@ -13,6 +13,8 @@ import { useToast } from '../components/Toast';
 import TestCaseTree from '../components/testcases/TestCaseTree';
 import TestCasesTop from '../components/testcases/TestCasesTop';
 import { testTypeService } from '../services/testTypeService';
+import { importService } from '../services/importService';
+import ImportTargetModal from '../components/testcases/ImportTargetModal';
  
 
 const TestCasesFolder = () => {
@@ -38,6 +40,9 @@ const TestCasesFolder = () => {
   const [expandOnSelect, setExpandOnSelect] = useState(false);
   const [expandAllKey, setExpandAllKey] = useState(0);
   const [collapseAllKey, setCollapseAllKey] = useState(0);
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [deferredFileOpen, setDeferredFileOpen] = useState(null);
+  const latestTargetRef = React.useRef(null);
   
   // Filters/Search
   const [searchTerm, setSearchTerm] = useState('');
@@ -137,6 +142,90 @@ const TestCasesFolder = () => {
         onList={() => navigate('/test-cases', { state: { viewMode: 'list' }, replace: true })}
         onGrid={() => navigate('/test-cases', { state: { viewMode: 'grid' }, replace: true })}
         onFolder={() => {}}
+        onImportParsed={async ({ file, testCases: imported, errors }) => {
+          const errs = Array.isArray(errors) ? errors : [];
+          const ok = Array.isArray(imported) ? imported.length : 0;
+          const msg = `${file?.name || 'File'} parsed: ${ok} row(s) valid${errs.length ? `, ${errs.length} error(s)` : ''}.`;
+          push?.({ variant: errs.length ? 'warning' : 'success', message: msg });
+          
+          // Log parsing errors to console but continue with import
+          if (errs.length) {
+            console.log(`Import parsing errors for ${file?.name || 'file'}:`, errs);
+            errs.forEach((error, index) => {
+              console.log(`Error ${index + 1}: Line ${error.line} - ${error.message}`);
+            });
+            push?.({ variant: 'warning', message: `Continuing import with ${ok} valid record(s). ${errs.length} parsing error(s) logged to console.` });
+          }
+          
+          // If no valid records to import, exit early
+          if (ok === 0) {
+            push?.({ variant: 'warning', message: 'No valid records to import.' });
+            return;
+          }
+          
+          const target = latestTargetRef.current;
+          if (!target?.projectId) { push?.({ variant: 'warning', message: 'No target selected.' }); return; }
+          
+          const res = await importService.importTestCases({
+            organizationId,
+            projectId: target.projectId,
+            rows: imported,
+            options: { createMissingFolders: false },
+            targetFolderId: target.folderId || null,
+            actorName: currentUserData?.name || currentUserData?.displayName || currentUserData?.email || '',
+          });
+          
+          const summary = `Imported ${res.created}/${ok} test case(s)`;
+          push?.({ variant: res.errors.length ? 'warning' : 'success', message: summary });
+          
+          if (res.errors.length) {
+            console.log('Import processing errors:', res.errors);
+            res.errors.forEach((error, index) => {
+              console.log(`Import error ${index + 1}: ${error.tcid || 'Unknown'} - ${error.message}`);
+            });
+            const first = res.errors[0];
+            push?.({ variant: 'error', message: `${first?.tcid || '?'}: ${first?.message || 'Import error'}` });
+          }
+          
+          // Refresh the specific folder's children and auto-expand it
+          if (target.folderId) {
+            setExpandFolderId(target.folderId);
+            setExpandKey((k) => k + 1);
+            // trigger a reload for that folder
+            setTreeRefreshKey((k) => k + 1);
+          } else {
+            // root-level: reload roots only (note: folder view hides root-level test cases by design)
+            setTreeRefreshKey((k) => k + 1);
+          }
+        }}
+        onOpenTargetModal={(proceedOpenFile) => {
+          setDeferredFileOpen(() => proceedOpenFile);
+          setImportModalOpen(true);
+        }}
+      />
+      <ImportTargetModal
+        open={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        projects={projects}
+        fetchFolders={async (pid) => {
+          const fetchLevel = async (parentId, prefix) => {
+            const children = await folderService.listChildren(organizationId, pid, parentId || null);
+            const rows = [];
+            for (const f of children) {
+              const pathLabel = prefix ? `${prefix}/${f.name}` : f.name;
+              rows.push({ ...f, pathLabel });
+              const sub = await fetchLevel(f.id, pathLabel);
+              rows.push(...sub);
+            }
+            return rows;
+          };
+          return fetchLevel(null, '');
+        }}
+        onConfirm={({ projectId: pid, folderId: fid }) => {
+          latestTargetRef.current = { projectId: pid, folderId: fid };
+          setImportModalOpen(false);
+          if (typeof deferredFileOpen === 'function') deferredFileOpen();
+        }}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -281,6 +370,20 @@ const TestCasesFolder = () => {
                   push?.({ variant: 'error', message: 'Failed to update test case' });
                 }
               }}
+              onDelete={async () => {
+                try {
+                  // Close the inline panel
+                  setShowInlinePanel(false);
+                  // Clear the selected test case
+                  setSelectedTestCase(null);
+                  // Refresh the tree to show the updated list
+                  setTreeRefreshKey((k) => k + 1);
+                  // Show success message
+                  push?.({ variant: 'success', message: 'Test case deleted successfully' });
+                } catch (err) {
+                  push?.({ variant: 'error', message: 'Failed to refresh after deletion' });
+                }
+              }}
               projectMembers={(() => {
               const effectiveProjectId = selectedTestCase?.projectId || selectedFolder?.projectId || projectId;
               const project = projects.find(p => p.id === effectiveProjectId);
@@ -303,14 +406,10 @@ const TestCasesFolder = () => {
           try {
             if (!selectedFolder?.id) return;
             const me = currentUserData?.name || currentUserData?.displayName || currentUserData?.email || '';
-            const makeTcid = (name) => {
-              const base = (name || 'TC').toString().toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 24);
-              const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
-              return `${base}-${rand}`;
-            };
             const payload = {
               ...form,
-              tcid: (form.tcid || '').trim() || makeTcid(form.name),
+              // server will generate tcid
+              tcid: form.tcid || '',
               author: form.author || me,
               folderId: selectedFolder.id,
               

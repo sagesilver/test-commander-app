@@ -1,6 +1,8 @@
 import React from 'react';
 import { Grid, Folder as FolderIcon, Plus, Search } from 'lucide-react';
 import ExportMenu from '../ExportMenu';
+import ImportButton from '../ImportButton';
+import ImportTargetModal from './ImportTargetModal';
  
 
 export default function TestCasesTop({
@@ -24,6 +26,8 @@ export default function TestCasesTop({
   orgTypes = [],
   onGrid,
   onFolder,
+  onImportParsed,
+  onOpenTargetModal,
 }) {
   return (
     <>
@@ -35,6 +39,7 @@ export default function TestCasesTop({
             <p className="mt-2 text-muted">Manage and organize your test cases</p>
           </div>
           <div className="flex items-center gap-3">
+            <ImportButton onParsed={onImportParsed} onOpenTargetModal={onOpenTargetModal} />
             <ExportMenu data={exportData} filename={exportFilename} onExport={() => {}} />
             <button
               onClick={onClickNew}

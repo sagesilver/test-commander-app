@@ -1,5 +1,6 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
+const { randomUUID } = require('crypto');
 
 // Initialize Admin SDK once
 try {
@@ -388,50 +389,96 @@ exports.linkUserToProfile = functions.region('australia-southeast1').https.onCal
   }
 });
 
-// Normalize TCID for global uniqueness
-function normalizeTcid(tcid) {
-  return (tcid || '')
-    .toString()
-    .trim()
-    .toUpperCase()
-    .replace(/\s+/g, '-')
-    .replace(/[^A-Z0-9\-]/g, '')
-    .slice(0, 100);
+// Helpers for composite TCID
+function toAcronym3(input, fallback = 'XXX') {
+  const s = String(input || '').toUpperCase();
+  const only = s.replace(/[^A-Z]/g, '');
+  const out = (only || '').slice(0, 3).padEnd(3, 'X');
+  return out || fallback;
 }
 
-// Create a test case with globally unique TCID using an index doc
+function projectInitialsFromName(name, projectId) {
+  const parts = String(name || '')
+    .split(/\s+/)
+    .map((w) => w.replace(/[^A-Za-z]/g, ''))
+    .filter(Boolean);
+  const letters = parts.slice(0, 3).map((w) => w[0].toUpperCase());
+  if (letters.length > 0) return letters.join('');
+  // Fallback to first 3 of projectId
+  return toAcronym3(projectId || 'PRJ');
+}
+
+// Create a test case with project-scoped unique TCID using per-project index and sequence
 exports.createTestCaseWithUniqueTcid = functions
   .region('australia-southeast1')
   .https.onCall(async (data, context) => {
-    if (!context.auth) {
-      throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
-    }
+    try {
+      console.log('createTestCaseWithUniqueTcid called with data:', data);
+      console.log('Context auth:', context.auth);
+      
+      if (!context.auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+      }
 
-    const { organizationId, projectId, payload } = data || {};
-    if (!organizationId || !projectId || !payload) {
-      throw new functions.https.HttpsError('invalid-argument', 'organizationId, projectId and payload are required');
-    }
+      const { organizationId, projectId, payload } = data || {};
+      console.log('Extracted:', { organizationId, projectId, payload });
+      
+      if (!organizationId || !projectId || !payload) {
+        throw new functions.https.HttpsError('invalid-argument', 'organizationId, projectId and payload are required');
+      }
 
     // Validate caller membership/privileges
-    const callerDoc = await db.collection('users').doc(context.auth.uid).get();
-    if (!callerDoc.exists) {
-      throw new functions.https.HttpsError('permission-denied', 'Caller has no user profile');
+    const callerUid = context.auth.uid;
+    const callerDoc = await db.collection('users').doc(callerUid).get();
+    let isAuthorized = false;
+    if (callerDoc.exists) {
+      const caller = callerDoc.data();
+      const callerRoles = Array.isArray(caller.roles) ? caller.roles : [];
+      const isAppAdmin = callerRoles.includes('APP_ADMIN');
+      const isOrgAdmin = callerRoles.includes('ORG_ADMIN') && caller.organisationId === organizationId;
+      const isMember = caller.organisationId === organizationId;
+      isAuthorized = (isAppAdmin || isOrgAdmin || isMember);
+    } else {
+      // Fallback: allow if caller is a project admin for the target project
+      const projRef = db.collection('organizations').doc(organizationId).collection('projects').doc(projectId);
+      const projSnap = await projRef.get();
+      if (projSnap.exists) {
+        const p = projSnap.data() || {};
+        const adminIds = Array.isArray(p.projectAdminIds) ? p.projectAdminIds : [];
+        isAuthorized = adminIds.includes(callerUid);
+      }
     }
-    const caller = callerDoc.data();
-    const callerRoles = Array.isArray(caller.roles) ? caller.roles : [];
-    const isAppAdmin = callerRoles.includes('APP_ADMIN');
-    const isOrgAdmin = callerRoles.includes('ORG_ADMIN') && caller.organisationId === organizationId;
-    const isMember = caller.organisationId === organizationId;
-    if (!(isAppAdmin || isOrgAdmin || isMember)) {
-      throw new functions.https.HttpsError('permission-denied', 'Not authorized to create test cases for this organization');
+    if (!isAuthorized) {
+      throw new functions.https.HttpsError('permission-denied', 'Not authorized to create test cases for this organization/project');
     }
 
-    const tcid = normalizeTcid(payload.tcid);
-    if (!tcid) {
-      throw new functions.https.HttpsError('invalid-argument', 'Valid tcid is required');
-    }
+    // Derive test type acronym
+    const testTypeCode = String(payload.testTypeCode || '').trim();
+    const testTypeName = String(payload.testTypeName || '').trim();
+    const typeAcr = toAcronym3(testTypeCode || testTypeName || 'TYP');
 
-    const indexRef = db.collection('tcidIndex').doc(tcid);
+    // Read project to derive initials
+    const projectSnap = await db
+      .collection('organizations').doc(organizationId)
+      .collection('projects').doc(projectId)
+      .get();
+    if (!projectSnap.exists) {
+      throw new functions.https.HttpsError('failed-precondition', 'Project does not exist');
+    }
+    const projectData = projectSnap.data() || {};
+    const projInit = projectInitialsFromName(projectData.name || projectData.projectName || '', projectId);
+
+    // Per-project counter for 5-digit sequence
+    const counterRef = db
+      .collection('organizations').doc(organizationId)
+      .collection('projects').doc(projectId)
+      .collection('counters').doc('testCase');
+
+    // Per-project TCID index
+    const indexRef = db
+      .collection('organizations').doc(organizationId)
+      .collection('projects').doc(projectId)
+      .collection('tcidIndex');
     const tcColRef = db
       .collection('organizations')
       .doc(organizationId)
@@ -457,25 +504,48 @@ exports.createTestCaseWithUniqueTcid = functions
     const now = admin.firestore.FieldValue.serverTimestamp();
     const userId = context.auth.uid;
 
-    const testCaseDoc = {
+    const testCaseDocBase = {
       ...payload,
-      tcid,
       organizationId,
       projectId,
       folderId,
       createdAt: now,
       createdBy: userId,
+      uid: (typeof randomUUID === 'function') ? randomUUID() : Math.random().toString(36).slice(2),
     };
 
+    console.log('About to run transaction with:', { counterRef: counterRef.path, indexRef: indexRef.path, tcColRef: tcColRef.path });
+    
     await db.runTransaction(async (tx) => {
-      const idx = await tx.get(indexRef);
+      console.log('Transaction started');
+      
+      // ALL READS FIRST
+      const counterSnap = await tx.get(counterRef);
+      const current = (counterSnap.exists && Number(counterSnap.data().seq)) || 0;
+      const nextSeq = current + 1;
+      console.log('Sequence:', { current, nextSeq });
+      
+      // Compose TCID
+      const seqStr = String(nextSeq).padStart(5, '0');
+      const tcid = `TCID-${projInit}-${typeAcr}-${seqStr}`;
+      console.log('Generated TCID:', tcid);
+
+      // Check TCID uniqueness (READ)
+      const tcidIndexRef = indexRef.doc(tcid);
+      const idx = await tx.get(tcidIndexRef);
       if (idx.exists) {
-        throw new functions.https.HttpsError('already-exists', 'TCID already exists');
+        throw new functions.https.HttpsError('already-exists', 'TCID already exists in project');
       }
 
+      // ALL WRITES AFTER ALL READS
+      tx.set(counterRef, { seq: nextSeq, updatedAt: now }, { merge: true });
+      
+      // Create test case doc
       const newTcRef = tcColRef.doc();
-      tx.set(newTcRef, testCaseDoc, { merge: true });
-      tx.set(indexRef, {
+      console.log('Creating test case with ID:', newTcRef.id);
+      
+      tx.set(newTcRef, { ...testCaseDocBase, tcid }, { merge: true });
+      tx.set(tcidIndexRef, {
         organizationId,
         projectId,
         testCaseId: newTcRef.id,
@@ -483,9 +553,15 @@ exports.createTestCaseWithUniqueTcid = functions
         createdAt: now,
         createdBy: userId,
       });
+      
+      console.log('Transaction completed successfully');
     });
 
-    return { success: true, tcid };
+      return { success: true };
+    } catch (error) {
+      console.error('Error in createTestCaseWithUniqueTcid:', error);
+      throw new functions.https.HttpsError('internal', `Internal error: ${error.message}`);
+    }
   });
 
 // Upload editor asset via Cloud Functions to avoid browser CORS issues

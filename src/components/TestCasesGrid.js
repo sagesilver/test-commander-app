@@ -72,10 +72,10 @@ const TestCasesGrid = ({
       id: 'tcid',
       header: 'Test Case ID',
       accessorKey: 'tcid',
-      size: 150,
+      size: 200,
       cell: ({ getValue }) => (
         <span
-          className="inline-flex items-center justify-center min-w-[112px] px-2 py-0.5 rounded-md text-xs font-medium bg-[rgb(var(--tc-icon))]/20 text-[rgb(var(--tc-icon))] text-center"
+          className="inline-flex items-center justify-center min-w-[180px] px-2 py-0.5 rounded-md text-xs font-medium bg-[rgb(var(--tc-icon))]/20 text-[rgb(var(--tc-icon))] text-center"
           title={getValue()}
         >
           {getValue()}

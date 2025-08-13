@@ -42,10 +42,10 @@ service cloud.firestore {
 
     // Users collection
     match /users/{userId} {
-      // Reverted: restrict reads and writes per previous RBAC scope
-      allow read: if isAppAdmin() || (request.auth != null && request.auth.uid == userId) || isOrgAdmin(resource.data.organisationId);
+      // Read: App Admin, Org Admin, Project Manager of same org, or self
+      allow read: if isAppAdmin() || isOrgAdmin(resource.data.organisationId) || isProjectManager(resource.data.organisationId) || (request.auth != null && request.auth.uid == userId);
       allow create: if isAppAdmin() || isOrgAdmin(request.resource.data.organisationId);
-      allow update: if isAppAdmin() || isOrgAdmin(resource.data.organisationId);
+      allow update: if isAppAdmin() || isOrgAdmin(resource.data.organisationId) || (request.auth != null && request.auth.uid == userId);
       allow delete: if isAppAdmin() || isOrgAdmin(resource.data.organisationId);
     }
 
@@ -101,7 +101,6 @@ service cloud.firestore {
           isOrgMember(organizationId) || isAppAdmin() || isOrgAdmin(organizationId)
         ) && (
           // Required minimal fields
-          request.resource.data.tcid is string &&
           request.resource.data.name is string &&
           request.resource.data.description is string &&
           request.resource.data.author is string &&
@@ -115,10 +114,15 @@ service cloud.firestore {
         );
 
         // Update: admins, project managers, or creator can update
-        allow update: if isAppAdmin() || isOrgAdmin(organizationId) || isProjectManager(organizationId) || (isAuthenticated() && request.auth.uid == resource.data.createdBy);
+        // TCID is system-generated and immutable after creation
+        allow update: if (
+          isAppAdmin() || isOrgAdmin(organizationId) || isProjectManager(organizationId) || (isAuthenticated() && request.auth.uid == resource.data.createdBy)
+        ) && (
+          request.resource.data.tcid == resource.data.tcid
+        );
 
-        // Delete: admins only (project managers cannot delete)
-        allow delete: if isAppAdmin() || isOrgAdmin(organizationId);
+        // Delete: admins, project managers, or creator can delete
+        allow delete: if isAppAdmin() || isOrgAdmin(organizationId) || isProjectManager(organizationId) || (isAuthenticated() && request.auth.uid == resource.data.createdBy);
       }
 
       // Org-level Test Types selection (store at /organizations/{organizationId}/testTypes/{testTypeId})

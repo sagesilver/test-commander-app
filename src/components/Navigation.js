@@ -26,7 +26,8 @@ import {
   Play,
   CheckCircle,
   Filter,
-  Zap
+  Zap,
+  Wrench
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -58,6 +59,7 @@ const Navigation = () => {
       { path: '/projects', label: 'All Projects', icon: FileText, section: 'admin' },
       { path: '/user-management', label: 'Global User Management', icon: Users, section: 'admin' },
       { path: '/system-config', label: 'System Configuration', icon: Settings, section: 'admin' },
+      { path: '/test-utilities', label: 'Test Utilities', icon: Wrench, section: 'admin' },
       { path: '/security', label: 'Security Settings', icon: Shield, section: 'admin' },
       { path: '/database', label: 'Database Management', icon: Database, section: 'admin' },
       { path: '/audit-logs', label: 'Audit Logs', icon: Activity, section: 'admin' },

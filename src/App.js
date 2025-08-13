@@ -16,6 +16,8 @@ import TestCasesFolder from './pages/TestCasesFolder';
 import AdminGlobalTestTypes from './pages/AdminGlobalTestTypes';
 import OrgTestTypes from './pages/OrgTestTypes';
 import SystemConfig from './pages/SystemConfig';
+import TestUtilities from './pages/TestUtilities';
+import TestImport from './pages/TestImport';
 import Login from './pages/Login';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -112,6 +114,16 @@ function AppRoutes() {
             <Route path="/org/settings/test-types" element={
               <ProtectedRoute>
                 <OrgTestTypes />
+              </ProtectedRoute>
+            } />
+            <Route path="/test-utilities" element={
+              <ProtectedRoute>
+                <TestUtilities />
+              </ProtectedRoute>
+            } />
+            <Route path="/test-import" element={
+              <ProtectedRoute>
+                <TestImport />
               </ProtectedRoute>
             } />
           </Routes>

@@ -7,7 +7,7 @@ export function ToastProvider({ children }) {
   const push = useCallback((toast) => {
     const id = Math.random().toString(36).slice(2);
     setToasts((prev) => [...prev, { id, ...toast }]);
-    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), toast.duration || 3000);
+    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), toast.duration || 15000);
   }, []);
   return (
     <ToastContext.Provider value={{ push }}>

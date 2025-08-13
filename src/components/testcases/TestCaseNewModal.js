@@ -59,8 +59,8 @@ export default function TestCaseNewModal({
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Test Case ID (TCID) <span className="text-red-500">*</span></label>
-              <input className="input-field" value={form.tcid} onChange={(e) => onChange({ tcid: e.target.value })} required />
+              <label className="block text-sm font-medium text-foreground mb-2">Test Case ID (TCID)</label>
+              <input className="input-field" value={form.tcid || ''} readOnly placeholder="Auto-generated on save" />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">Test Case Name <span className="text-red-500">*</span></label>

@@ -67,6 +67,12 @@ export const AuthProvider = ({ children }) => {
               if (orgData) {
                 setCurrentOrganization(orgData);
               }
+            } else if (userData.organisationId && userData.roles.includes(USER_ROLES.APP_ADMIN)) {
+              // App Admins with an organization can still access all orgs, but set current org for convenience
+              const orgData = await getOrganizationData(userData.organisationId);
+              if (orgData) {
+                setCurrentOrganization(orgData);
+              }
             }
           } else {
             console.log('AuthContext: No user data found, setting to null');
@@ -140,7 +146,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const getOrganizations = async () => {
-    // App Admin: can load all organizations
+    // App Admin: can load all organizations (regardless of their own organizationId)
     if (currentUserData?.roles?.includes(USER_ROLES.APP_ADMIN)) {
       const orgs = await organizationService.getAllOrganizations();
       return orgs.filter(org => org.isActive !== false);

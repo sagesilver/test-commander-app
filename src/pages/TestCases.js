@@ -6,6 +6,7 @@ import {
   Filter, 
   ChevronDown, 
   ChevronRight,
+  FileText,
   Edit,
   Trash2,
   Copy,
@@ -36,6 +37,9 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { testCaseService } from '../services/testCaseService';
 import { useToast } from '../components/Toast';
 import { projectsService } from '../services/projectsService';
+import { importService } from '../services/importService';
+import ImportTargetModal from '../components/testcases/ImportTargetModal';
+import { folderService } from '../services/folderService';
  
 
 const TestCases = () => {
@@ -61,6 +65,8 @@ const TestCases = () => {
   // Projects
   const [projects, setProjects] = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState(null);
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [deferredFileOpen, setDeferredFileOpen] = useState(null);
   // Organization users for Test Author dropdown
   const [organizationUsers, setOrganizationUsers] = useState([]);
   // List view refresh signal to reload visible nodes after saves
@@ -226,9 +232,11 @@ const TestCases = () => {
           return;
         }
         await testCaseService.deleteTestCase(currentOrganization.id, testCase.projectId, testCase.id);
+        push?.({ variant: 'success', message: `Deleted <${testCase.tcid}: ${testCase.name}>` });
         await loadTestCases();
       } catch (error) {
         console.error('Error deleting test case:', error);
+        push?.({ variant: 'error', message: 'Failed to delete test case' });
       }
     }
   };
@@ -247,9 +255,11 @@ const TestCases = () => {
           }
           return testCaseService.deleteTestCase(currentOrganization.id, tc.projectId, tc.id);
         }));
+        push?.({ variant: 'success', message: `Deleted ${selectedTestCases.length} test case(s)` });
         await loadTestCases();
       } catch (error) {
         console.error('Error bulk deleting test cases:', error);
+        push?.({ variant: 'error', message: 'Failed to delete selected test cases' });
       }
     }
   };
@@ -265,14 +275,10 @@ const TestCases = () => {
         window.alert('Cannot create test case. No project is selected. Ask your Organization Admin or Project Manager to create a project and assign you.');
         return;
       }
-      const makeTcid = (name) => {
-        const base = (name || 'TC').toString().toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 24);
-        const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
-        return `${base}-${rand}`;
-      };
       const payload = {
         ...formData,
-        tcid: (formData?.tcid || '').trim() || makeTcid(formData?.name),
+        // tcid is server-generated now; omit here
+        tcid: formData?.tcid || '',
         author: currentUserData?.name || currentUserData?.displayName || currentUserData?.email,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -654,6 +660,85 @@ const TestCases = () => {
 
   // Tags removed
 
+  const handleImportParsed = async ({ file, testCases: imported, errors }) => {
+    try {
+      const errs = Array.isArray(errors) ? errors : [];
+      const ok = Array.isArray(imported) ? imported.length : 0;
+      const parsedMsg = `${file?.name || 'File'} parsed: ${ok} row(s) valid${errs.length ? `, ${errs.length} error(s)` : ''}.`;
+      push?.({ variant: errs.length ? 'warning' : 'success', message: parsedMsg });
+      
+      // Log parsing errors to console but continue with import
+      if (errs.length) {
+        console.log(`Import parsing errors for ${file?.name || 'file'}:`, errs);
+        errs.forEach((error, index) => {
+          console.log(`Error ${index + 1}: Line ${error.line} - ${error.message}`);
+        });
+        push?.({ variant: 'warning', message: `Continuing import with ${ok} valid record(s). ${errs.length} parsing error(s) logged to console.` });
+      }
+      
+      // If no valid records to import, exit early
+      if (ok === 0) {
+        push?.({ variant: 'warning', message: 'No valid records to import.' });
+        return;
+      }
+      
+      // Target project/folder selected in modal earlier; we stash it in state when user confirms
+      const target = latestTargetRef.current;
+      if (!target?.projectId) { push?.({ variant: 'warning', message: 'No target selected.' }); return; }
+      
+      // Import into DB
+      const res = await importService.importTestCases({
+        organizationId: currentOrganization.id,
+        projectId: target.projectId,
+        rows: imported,
+        options: { createMissingFolders: false },
+        targetFolderId: target.folderId || null,
+        actorName: currentUserData?.name || currentUserData?.displayName || currentUserData?.email || '',
+      });
+      
+      const summary = `Imported ${res.created}/${ok} test case(s)`;
+      push?.({ variant: res.errors.length ? 'warning' : 'success', message: summary });
+      
+      if (res.errors.length) {
+        console.log('Import processing errors:', res.errors);
+        res.errors.forEach((error, index) => {
+          console.log(`Import error ${index + 1}: ${error.tcid || 'Unknown'} - ${error.message}`);
+        });
+        const first = res.errors[0];
+        push?.({ variant: 'error', message: `${first?.tcid || '?'}: ${first?.message || 'Import error'}` });
+      }
+      
+      // Refresh list
+      await loadTestCases();
+    } catch (e) {
+      console.error('Import process failed:', e);
+      push?.({ variant: 'error', message: 'Import failed' });
+    }
+  };
+
+  // Keep last chosen target
+  const latestTargetRef = React.useRef(null);
+  const openImportTargetModal = (proceedOpenFile) => {
+    setDeferredFileOpen(() => proceedOpenFile);
+    setImportModalOpen(true);
+  };
+
+  const fetchAllFoldersFlat = async (projectId) => {
+    // Build a flat list with path labels
+    const fetchLevel = async (parentId, prefix) => {
+      const children = await folderService.listChildren(currentOrganization.id, projectId, parentId || null);
+      const rows = [];
+      for (const f of children) {
+        const pathLabel = prefix ? `${prefix}/${f.name}` : f.name;
+        rows.push({ ...f, pathLabel });
+        const sub = await fetchLevel(f.id, pathLabel);
+        rows.push(...sub);
+      }
+      return rows;
+    };
+    return fetchLevel(null, '');
+  };
+
   return (
     <div className="min-h-screen bg-surface">
       <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
@@ -687,6 +772,10 @@ const TestCases = () => {
           orgTypes={orgTypes}
           onGrid={() => setViewMode('grid')}
           onFolder={() => navigate('/test-cases-folder', { state: { viewMode: 'folder' }, replace: true })}
+          onImportParsed={handleImportParsed}
+          onOpenTargetModal={(proceedOpenFile) => {
+            openImportTargetModal(proceedOpenFile);
+          }}
           
         />
 
@@ -708,6 +797,19 @@ const TestCases = () => {
           ) : null}
         </div>
       </div>
+
+      {/* Import Target Modal */}
+      <ImportTargetModal
+        open={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        projects={projects}
+        fetchFolders={fetchAllFoldersFlat}
+        onConfirm={({ projectId, folderId }) => {
+          latestTargetRef.current = { projectId, folderId };
+          setImportModalOpen(false);
+          if (typeof deferredFileOpen === 'function') deferredFileOpen();
+        }}
+      />
 
       {/* Modals */}
       {showNewTestCaseModal && (

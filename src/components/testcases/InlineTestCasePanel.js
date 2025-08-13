@@ -5,9 +5,12 @@ import { useAuth } from '../../contexts/AuthContext';
 import { testCaseService } from '../../services/testCaseService';
 import TestCaseForm from './TestCaseForm';
 
-export default function InlineTestCasePanel({ testCase, mode = 'view', onModeChange, onSave, projectMembers = [] }) {
+export default function InlineTestCasePanel({ testCase, mode = 'view', onModeChange, onSave, onDelete, projectMembers = [] }) {
   const [local, setLocal] = useState(null);
   const { currentUserData, currentOrganization } = useAuth();
+  
+  // Use the same organization ID pattern as TestCasesFolder
+  const organizationId = currentOrganization?.id || currentUserData?.organisationId || '';
 
   useEffect(() => {
     setLocal(testCase ? { ...testCase } : null);
@@ -19,7 +22,7 @@ export default function InlineTestCasePanel({ testCase, mode = 'view', onModeCha
 
   const isView = mode !== 'edit';
   const canDelete = Array.isArray(currentUserData?.roles) && (
-    currentUserData.roles.includes('APP_ADMIN') || currentUserData.roles.includes('ORG_ADMIN')
+    currentUserData.roles.includes('APP_ADMIN') || currentUserData.roles.includes('ORG_ADMIN') || currentUserData.roles.includes('PROJECT_MANAGER') || (testCase?.createdBy && currentUserData?.userId === testCase.createdBy)
   );
 
   // Larger run-history preview (same logic as list view, scaled) using simple seed
@@ -96,15 +99,38 @@ export default function InlineTestCasePanel({ testCase, mode = 'view', onModeCha
             <button className={`px-3 py-1 rounded-md text-sm ${isView ? 'bg-white/10 text-white' : 'text-menu hover:text-white'}`} onClick={() => onModeChange?.('view')}>View</button>
             <button className={`px-3 py-1 rounded-md text-sm ${!isView ? 'bg-white/10 text-white' : 'text-menu hover:text-white'}`} onClick={() => onModeChange?.('edit')}>Edit</button>
           </div>
-          {canDelete && (
+          {canDelete && isView && (
             <button
               className="p-2 rounded-md text-red-400 hover:text-red-300 hover:bg-white/10"
               title="Delete Test Case"
               onClick={async () => {
                 if (!window.confirm('Delete this test case?')) return;
-                if (!testCase?.projectId) return;
-                await testCaseService.deleteTestCase(currentOrganization.id, testCase.projectId, testCase.id);
-                onModeChange?.('view');
+                if (!testCase?.projectId) {
+                  alert('Missing project ID for test case');
+                  return;
+                }
+                if (!organizationId) {
+                  alert('Missing organization ID');
+                  return;
+                }
+                
+                try {
+                  console.log('Deleting test case:', {
+                    organizationId: organizationId,
+                    projectId: testCase.projectId,
+                    testCaseId: testCase.id
+                  });
+                  
+                  await testCaseService.deleteTestCase(organizationId, testCase.projectId, testCase.id);
+                  console.log('Test case deleted successfully');
+                  
+                  // Notify parent to refresh the list and close the panel
+                  onModeChange?.('view');
+                  onDelete?.(); // Notify parent that deletion was successful
+                } catch (error) {
+                  console.error('Failed to delete test case:', error);
+                  alert(`Failed to delete test case: ${error.message}`);
+                }
               }}
             >
               <Trash2 className="w-4 h-4" />
@@ -117,7 +143,7 @@ export default function InlineTestCasePanel({ testCase, mode = 'view', onModeCha
       </div>
 
       <TestCaseForm
-        organizationId={currentOrganization?.id}
+        organizationId={organizationId}
         mode={isView ? 'view' : 'edit'}
         form={local}
         onChange={(updates) => setLocal({ ...local, ...updates })}

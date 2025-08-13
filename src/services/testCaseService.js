@@ -54,7 +54,6 @@ export const testCaseService = {
     assert(organizationId, 'organizationId required');
     assert(projectId, 'projectId required');
     assert(payload && typeof payload === 'object', 'payload required');
-    assert(typeof payload.tcid === 'string' && payload.tcid.trim().length > 0, 'tcid required');
     assert(typeof payload.name === 'string' && payload.name.trim().length > 0, 'name required');
     assert(typeof payload.description === 'string' && (payload.description.replace(/<[^>]*>/g, '').trim().length > 0), 'description required');
     assert(typeof payload.author === 'string' && payload.author.trim().length > 0, 'author required');
