@@ -1,6 +1,7 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const { randomUUID } = require('crypto');
+const { writeBatch } = require('firebase-admin/firestore');
 
 // Initialize Admin SDK once
 try {
@@ -78,6 +79,48 @@ const ALLOWED_ROLES = new Set([
   'TEST_ENGINEER',
   'DEFECT_COORDINATOR',
 ]);
+
+// Default reference values for defects
+const DEFAULT_DEFECT_REFERENCE_VALUES = {
+  defect_status: [
+    { id: 'open', label: 'Open', isDefault: true, isActive: true, order: 1 },
+    { id: 'in_progress', label: 'In Progress', isDefault: true, isActive: true, order: 2 },
+    { id: 'in_review', label: 'In Review', isDefault: true, isActive: true, order: 3 },
+    { id: 'blocked', label: 'Blocked', isDefault: true, isActive: true, order: 4 },
+    { id: 'resolved', label: 'Resolved', isDefault: true, isActive: true, order: 5 },
+    { id: 'verified', label: 'Verified', isDefault: true, isActive: true, order: 6 },
+    { id: 'closed', label: 'Closed', isDefault: true, isActive: true, order: 7 },
+    { id: 'archived', label: 'Archived', isDefault: false, isActive: true, order: 8 }
+  ],
+  defect_severity: [
+    { id: 'critical', label: 'Critical', isDefault: true, isActive: true, order: 1 },
+    { id: 'high', label: 'High', isDefault: true, isActive: true, order: 2 },
+    { id: 'medium', label: 'Medium', isDefault: true, isActive: true, order: 3 },
+    { id: 'low', label: 'Low', isDefault: true, isActive: true, order: 4 },
+    { id: 'trivial', label: 'Trivial', isDefault: true, isActive: true, order: 5 }
+  ],
+  defect_priority: [
+    { id: 'p0', label: 'P0', isDefault: true, isActive: true, order: 1 },
+    { id: 'p1', label: 'P1', isDefault: true, isActive: true, order: 2 },
+    { id: 'p2', label: 'P2', isDefault: true, isActive: true, order: 3 },
+    { id: 'p3', label: 'P3', isDefault: true, isActive: true, order: 4 }
+  ],
+  defect_reproducibility: [
+    { id: 'always', label: 'Always', isDefault: true, isActive: true, order: 1 },
+    { id: 'often', label: 'Often', isDefault: true, isActive: true, order: 2 },
+    { id: 'intermittent', label: 'Intermittent', isDefault: true, isActive: true, order: 3 },
+    { id: 'rare', label: 'Rare', isDefault: true, isActive: true, order: 4 },
+    { id: 'unable_to_reproduce', label: 'Unable to Reproduce', isDefault: true, isActive: true, order: 5 }
+  ],
+  defect_resolution: [
+    { id: 'fixed', label: 'Fixed', isDefault: true, isActive: true, order: 1 },
+    { id: 'wont_fix', label: 'Won\'t Fix', isDefault: true, isActive: true, order: 2 },
+    { id: 'duplicate', label: 'Duplicate', isDefault: true, isActive: true, order: 3 },
+    { id: 'as_designed', label: 'As Designed', isDefault: true, isActive: true, order: 4 },
+    { id: 'cannot_reproduce', label: 'Cannot Reproduce', isDefault: true, isActive: true, order: 5 },
+    { id: 'deferred', label: 'Deferred', isDefault: true, isActive: true, order: 6 }
+  ]
+};
 
 exports.createUserAndInvite = functions.region('australia-southeast1').https.onCall(async (data, context) => {
   console.log('Function called with data:', data);
@@ -655,6 +698,677 @@ exports.uploadEditorAssetHttp = functions
     } catch (err) {
       console.error('uploadEditorAssetHttp failed', err);
       return res.status(500).json({ error: 'Internal error' });
+    }
+  });
+
+// Create defect with unique sequential key
+exports.createDefectWithUniqueKey = functions
+  .region('australia-southeast1')
+  .https.onCall(async (data, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+    }
+
+          try {
+        const { organizationId, projectId, payload } = data;
+        
+        // Validate required fields
+        assert(organizationId, 'organizationId is required');
+        assert(projectId, 'projectId is required');
+        assert(payload, 'payload is required');
+        assert(payload.title && payload.title.trim(), 'title is required');
+        assert(payload.description && payload.description.trim(), 'description is required');
+        assert(payload.severity && payload.severity.trim(), 'severity is required');
+        assert(payload.priority && payload.priority.trim(), 'priority is required');
+
+      // Get the next sequential defect number for this project
+      const counterRef = db.collection('counters').doc(organizationId).collection('projects').doc(projectId);
+      
+      const result = await db.runTransaction(async (transaction) => {
+        const counterDoc = await transaction.get(counterRef);
+        let defectSeq = 1;
+        
+        if (counterDoc.exists) {
+          defectSeq = (counterDoc.data().defectSeq || 0) + 1;
+        }
+        
+        // Update the counter
+        transaction.set(counterRef, { defectSeq }, { merge: true });
+        
+        // Create the defect document
+        const defectData = {
+          key: `DEF-${String(defectSeq).padStart(4, '0')}`,
+          organizationId,
+          projectId,
+          title: payload.title.trim(),
+          description: payload.description.trim(),
+          severity: payload.severity,
+          priority: payload.priority,
+          status: payload.status || 'open',
+          assignedTo: payload.assignedTo || null,
+          raisedBy: payload.raisedBy || context.auth.uid,
+          reporterId: context.auth.uid,
+          folderId: payload.folderId || null,
+          environment: payload.environment || null,
+          browser: payload.browser || null,
+          operatingSystem: payload.operatingSystem || null,
+          stepsToReproduce: payload.stepsToReproduce || null,
+          expectedBehavior: payload.expectedBehavior || null,
+          actualBehavior: payload.actualBehavior || null,
+          reproducibility: payload.reproducibility || null,
+          resolution: payload.resolution || null,
+          affectedVersion: payload.affectedVersion || null,
+          foundInBuild: payload.foundInBuild || null,
+          fixedInBuild: payload.fixedInBuild || null,
+          attachments: payload.attachments || [],
+          linkedTestCaseIds: payload.linkedTestCaseIds || [],
+          linkedRunIds: payload.linkedRunIds || [],
+          tags: payload.tags || [],
+          watcherIds: [context.auth.uid], // Include reporter as watcher
+          commentCount: 0,
+          attachmentCount: payload.attachments ? payload.attachments.length : 0,
+          lastActivityAt: admin.firestore.FieldValue.serverTimestamp(),
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          createdBy: context.auth.uid,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedBy: context.auth.uid
+        };
+
+        // Create searchable text for filtering
+        defectData.searchText = [
+          defectData.title.toLowerCase(),
+          defectData.description.toLowerCase(),
+          defectData.key.toLowerCase(),
+          (defectData.tags || []).join(' ').toLowerCase()
+        ].join(' ');
+
+        // Normalize tags and update tag catalog
+        if (defectData.tags && defectData.tags.length > 0) {
+          const tagCatalogRef = db.collection('organizations', organizationId, 'tag_catalog');
+          for (const tag of defectData.tags) {
+            const normalizedTag = tag.toLowerCase().trim().replace(/\s+/g, '-');
+            const tagDocRef = tagCatalogRef.doc(normalizedTag);
+            transaction.set(tagDocRef, {
+              tag: tag,
+              slug: normalizedTag,
+              useCount: admin.firestore.FieldValue.increment(1),
+              lastUsed: admin.firestore.FieldValue.serverTimestamp(),
+              createdAt: admin.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+          }
+        }
+
+        const defectRef = db.collection('organizations', organizationId, 'projects', projectId, 'defects');
+        const newDefectRef = await transaction.create(defectRef.doc(), defectData);
+        
+        // Create initial history event
+        const historyRef = newDefectRef.collection('history');
+        transaction.create(historyRef.doc(), {
+          type: 'created',
+          field: 'status',
+          old: null,
+          new: defectData.status,
+          at: admin.firestore.FieldValue.serverTimestamp(),
+          by: context.auth.uid,
+          description: 'Defect created'
+        });
+        
+        return {
+          id: newDefectRef.id,
+          ...defectData
+        };
+      });
+
+      return result;
+    } catch (error) {
+      console.error('Error in createDefectWithUniqueKey:', error);
+      throw new functions.https.HttpsError('internal', `Internal error: ${error.message}`);
+    }
+  });
+
+// Defect update trigger for change history and denormalized counters
+exports.onDefectUpdate = functions
+  .region('australia-southeast1')
+  .firestore
+  .document('organizations/{organizationId}/projects/{projectId}/defects/{defectId}')
+  .onUpdate(async (change, context) => {
+    const { organizationId, projectId, defectId } = context.params;
+    const before = change.before.data();
+    const after = change.after.data();
+    
+    try {
+      const batch = writeBatch(db);
+      
+      // Track field changes for history
+      const fieldsToTrack = ['status', 'severity', 'priority', 'assignedTo', 'resolution', 'folderId'];
+      const changes = [];
+      
+      for (const field of fieldsToTrack) {
+        if (before[field] !== after[field]) {
+          changes.push({
+            type: 'field_changed',
+            field: field,
+            old: before[field],
+            new: after[field],
+            at: admin.firestore.FieldValue.serverTimestamp(),
+            by: after.updatedBy || 'system',
+            description: `${field} changed from ${before[field]} to ${after[field]}`
+          });
+        }
+      }
+      
+      // Add history events
+      if (changes.length > 0) {
+        const historyRef = change.after.ref.collection('history');
+        for (const changeEvent of changes) {
+          batch.create(historyRef.doc(), changeEvent);
+        }
+      }
+      
+      // Update search text if relevant fields changed
+      const searchTextFields = ['title', 'description', 'tags'];
+      let searchTextChanged = false;
+      for (const field of searchTextFields) {
+        if (before[field] !== after[field]) {
+          searchTextChanged = true;
+          break;
+        }
+      }
+      
+      if (searchTextChanged) {
+        const newSearchText = [
+          after.title.toLowerCase(),
+          after.description.toLowerCase(),
+          after.key.toLowerCase(),
+          (after.tags || []).join(' ').toLowerCase()
+        ].join(' ');
+        
+        batch.update(change.after.ref, { searchText: newSearchText });
+      }
+      
+      // Update tag catalog if tags changed
+      if (JSON.stringify(before.tags || []) !== JSON.stringify(after.tags || [])) {
+        const tagCatalogRef = db.collection('organizations', organizationId, 'tag_catalog');
+        
+        // Remove old tags
+        if (before.tags) {
+          for (const tag of before.tags) {
+            const normalizedTag = tag.toLowerCase().trim().replace(/\s+/g, '-');
+            const tagDocRef = tagCatalogRef.doc(normalizedTag);
+            batch.update(tagDocRef, {
+              useCount: admin.firestore.FieldValue.increment(-1),
+              lastUsed: admin.firestore.FieldValue.serverTimestamp()
+            });
+          }
+        }
+        
+        // Add new tags
+        if (after.tags) {
+          for (const tag of after.tags) {
+            const normalizedTag = tag.toLowerCase().trim().replace(/\s+/g, '-');
+            const tagDocRef = tagCatalogRef.doc(normalizedTag);
+            batch.set(tagDocRef, {
+              tag: tag,
+              slug: normalizedTag,
+              useCount: admin.firestore.FieldValue.increment(1),
+              lastUsed: admin.firestore.FieldValue.serverTimestamp(),
+              createdAt: admin.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+          }
+        }
+      }
+      
+      await batch.commit();
+      console.log(`Defect ${defectId} updated with ${changes.length} changes tracked`);
+      
+    } catch (error) {
+      console.error('Error in onDefectUpdate:', error);
+    }
+  });
+
+// Initialize default reference values for defects
+exports.initializeDefectReferenceValues = functions
+  .region('australia-southeast1')
+  .https.onCall(async (data, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+    }
+
+    try {
+      const { organizationId } = data;
+      assert(organizationId, 'organizationId is required');
+
+      // Check if user has permission to initialize reference values
+      const userDoc = await db.collection('users').doc(context.auth.uid).get();
+      if (!userDoc.exists) {
+        throw new functions.https.HttpsError('permission-denied', 'User not found');
+      }
+
+      const userData = userDoc.data();
+      const isAppAdmin = userData.roles && userData.roles.includes('APP_ADMIN');
+      const isOrgAdmin = userData.roles && userData.roles.includes('ORG_ADMIN') && userData.organisationId === organizationId;
+
+      if (!isAppAdmin && !isOrgAdmin) {
+        throw new functions.https.HttpsError('permission-denied', 'Insufficient permissions');
+      }
+
+      const batch = writeBatch(db);
+      const refValuesRef = db.collection('organizations', organizationId, 'ref_values');
+
+      // Initialize each reference type
+      for (const [refType, values] of Object.entries(DEFAULT_DEFECT_REFERENCE_VALUES)) {
+        for (const value of values) {
+          const docRef = refValuesRef.doc(refType).collection('values').doc(value.id);
+          batch.set(docRef, {
+            ...value,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            createdBy: context.auth.uid
+          });
+        }
+      }
+
+      await batch.commit();
+      return { success: true, message: 'Reference values initialized successfully' };
+    } catch (error) {
+      console.error('Error in initializeDefectReferenceValues:', error);
+      throw new functions.https.HttpsError('internal', `Internal error: ${error.message}`);
+    }
+  });
+
+// Comment management functions
+exports.createDefectComment = functions
+  .region('australia-southeast1')
+  .https.onCall(async (data, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+    }
+
+    try {
+      const { organizationId, projectId, defectId, comment } = data;
+      assert(organizationId, 'organizationId is required');
+      assert(projectId, 'projectId is required');
+      assert(defectId, 'defectId is required');
+      assert(comment && comment.trim(), 'comment is required');
+
+      const commentData = {
+        text: comment.trim(),
+        createdBy: context.auth.uid,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      };
+
+      const commentRef = db.collection('organizations', organizationId, 'projects', projectId, 'defects', defectId, 'comments');
+      const newComment = await commentRef.add(commentData);
+
+      // Update defect comment count and last activity
+      const defectRef = db.collection('organizations', organizationId, 'projects', projectId, 'defects', defectId);
+      await defectRef.update({
+        commentCount: admin.firestore.FieldValue.increment(1),
+        lastActivityAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedBy: context.auth.uid
+      });
+
+      // Add history event
+      const historyRef = defectRef.collection('history');
+      await historyRef.add({
+        type: 'comment_added',
+        field: 'commentCount',
+        old: (commentData.commentCount || 0) - 1,
+        new: commentData.commentCount || 0,
+        at: admin.firestore.FieldValue.serverTimestamp(),
+        by: context.auth.uid,
+        description: 'Comment added',
+        commentId: newComment.id
+      });
+
+      return { id: newComment.id, ...commentData };
+    } catch (error) {
+      console.error('Error in createDefectComment:', error);
+      throw new functions.https.HttpsError('internal', `Internal error: ${error.message}`);
+    }
+  });
+
+exports.updateDefectComment = functions
+  .region('australia-southeast1')
+  .https.onCall(async (data, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+    }
+
+    try {
+      const { organizationId, projectId, defectId, commentId, comment } = data;
+      assert(organizationId, 'organizationId is required');
+      assert(projectId, 'projectId is required');
+      assert(defectId, 'defectId is required');
+      assert(commentId, 'commentId is required');
+      assert(comment && comment.trim(), 'comment is required');
+
+      const commentRef = db.collection('organizations', organizationId, 'projects', projectId, 'defects', defectId, 'comments', commentId);
+      const commentDoc = await commentRef.get();
+
+      if (!commentDoc.exists) {
+        throw new functions.https.HttpsError('not-found', 'Comment not found');
+      }
+
+      const commentData = commentDoc.data();
+      if (commentData.createdBy !== context.auth.uid) {
+        throw new functions.https.HttpsError('permission-denied', 'Can only edit own comments');
+      }
+
+      await commentRef.update({
+        text: comment.trim(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error in updateDefectComment:', error);
+      throw new functions.https.HttpsError('internal', `Internal error: ${error.message}`);
+    }
+  });
+
+exports.deleteDefectComment = functions
+  .region('australia-southeast1')
+  .https.onCall(async (data, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+    }
+
+    try {
+      const { organizationId, projectId, defectId, commentId } = data;
+      assert(organizationId, 'organizationId is required');
+      assert(projectId, 'projectId is required');
+      assert(defectId, 'defectId is required');
+      assert(commentId, 'commentId is required');
+
+      const commentRef = db.collection('organizations', organizationId, 'projects', projectId, 'defects', defectId, 'comments', commentId);
+      const commentDoc = await commentRef.get();
+
+      if (!commentDoc.exists) {
+        throw new functions.https.HttpsError('not-found', 'Comment not found');
+      }
+
+      const commentData = commentDoc.data();
+      if (commentData.createdBy !== context.auth.uid) {
+        throw new functions.https.HttpsError('permission-denied', 'Can only delete own comments');
+      }
+
+      await commentRef.delete();
+
+      // Update defect comment count and last activity
+      const defectRef = db.collection('organizations', organizationId, 'projects', projectId, 'defects', defectId);
+      await defectRef.update({
+        commentCount: admin.firestore.FieldValue.increment(-1),
+        lastActivityAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedBy: context.auth.uid
+      });
+
+      // Add history event
+      const historyRef = defectRef.collection('history');
+      await historyRef.add({
+        type: 'comment_deleted',
+        field: 'commentCount',
+        old: (commentData.commentCount || 0) + 1,
+        new: commentData.commentCount || 0,
+        at: admin.firestore.FieldValue.serverTimestamp(),
+        by: context.auth.uid,
+        description: 'Comment deleted',
+        commentId: commentId
+      });
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error in deleteDefectComment:', error);
+      throw new functions.https.HttpsError('internal', `Internal error: ${error.message}`);
+    }
+  });
+
+// Export defects function
+exports.exportDefects = functions
+  .region('australia-southeast1')
+  .https.onCall(async (data, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+    }
+
+    try {
+      const { organizationId, projectId, filters, format = 'csv' } = data;
+      assert(organizationId, 'organizationId is required');
+
+      // Build query based on filters
+      let query = db.collectionGroup('defects').where('organizationId', '==', organizationId);
+      
+      if (projectId) {
+        query = query.where('projectId', '==', projectId);
+      }
+
+      if (filters) {
+        if (filters.status) query = query.where('status', '==', filters.status);
+        if (filters.severity) query = query.where('severity', '==', filters.severity);
+        if (filters.priority) query = query.where('priority', '==', filters.priority);
+        if (filters.assignedTo) query = query.where('assignedTo', '==', filters.assignedTo);
+      }
+
+      const snapshot = await query.get();
+      const defects = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      // Convert to requested format
+      let exportData;
+      if (format === 'csv') {
+        exportData = defects.map(defect => ({
+          'Defect ID': defect.key,
+          'Title': defect.title,
+          'Status': defect.status,
+          'Severity': defect.severity,
+          'Priority': defect.priority,
+          'Assigned To': defect.assignedTo,
+          'Project': defect.projectId,
+          'Module': defect.folderId,
+          'Created': defect.createdAt?.toDate?.() || defect.createdAt,
+          'Updated': defect.updatedAt?.toDate?.() || defect.updatedAt,
+          'Tags': (defect.tags || []).join('|'),
+          'Comments': defect.commentCount || 0,
+          'Attachments': defect.attachmentCount || 0
+        }));
+      } else {
+        exportData = defects;
+      }
+
+      return { 
+        success: true, 
+        data: exportData, 
+        count: defects.length,
+        format: format
+      };
+    } catch (error) {
+      console.error('Error in exportDefects:', error);
+      throw new functions.https.HttpsError('internal', `Internal error: ${error.message}`);
+    }
+  });
+
+// Import defects function
+exports.importDefects = functions
+  .region('australia-southeast1')
+  .https.onCall(async (data, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+    }
+
+    try {
+      const { organizationId, projectId, defects, dryRun = false } = data;
+      assert(organizationId, 'organizationId is required');
+      assert(projectId, 'projectId is required');
+      assert(Array.isArray(defects), 'defects must be an array');
+
+      const results = {
+        created: 0,
+        updated: 0,
+        errors: [],
+        dryRun: dryRun
+      };
+
+      if (dryRun) {
+        // Validate without creating
+        for (const defect of defects) {
+          if (!defect.title || !defect.severity || !defect.priority) {
+            results.errors.push(`Defect missing required fields: ${defect.title || 'No title'}`);
+          }
+        }
+        return results;
+      }
+
+      // Process defects in batches
+      const batch = writeBatch(db);
+      let batchCount = 0;
+      const maxBatchSize = 500;
+
+      for (const defect of defects) {
+        try {
+          if (defect.key && defect.key.trim()) {
+            // Update existing defect
+            const defectQuery = await db.collectionGroup('defects')
+              .where('key', '==', defect.key.trim())
+              .where('projectId', '==', projectId)
+              .limit(1)
+              .get();
+
+            if (!defectQuery.empty) {
+              const defectDoc = defectQuery.docs[0];
+              const updates = {
+                title: defect.title || defectDoc.data().title,
+                description: defect.description || defectDoc.data().description,
+                severity: defect.severity || defectDoc.data().severity,
+                priority: defect.priority || defectDoc.data().priority,
+                status: defect.status || defectDoc.data().status,
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                updatedBy: context.auth.uid
+              };
+
+              batch.update(defectDoc.ref, updates);
+              results.updated++;
+            } else {
+              results.errors.push(`Defect with key ${defect.key} not found in project ${projectId}`);
+            }
+          } else {
+            // Create new defect
+            const defectData = {
+              organizationId,
+              projectId,
+              title: defect.title,
+              description: defect.description || '',
+              severity: defect.severity,
+              priority: defect.priority,
+              status: defect.status || 'open',
+              assignedTo: defect.assignedTo || null,
+              raisedBy: context.auth.uid,
+              reporterId: context.auth.uid,
+              folderId: defect.folderId || null,
+              tags: defect.tags || [],
+              createdAt: admin.firestore.FieldValue.serverTimestamp(),
+              createdBy: context.auth.uid,
+              updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+              updatedBy: context.auth.uid
+            };
+
+            const defectRef = db.collection('organizations', organizationId, 'projects', projectId, 'defects').doc();
+            batch.set(defectRef, defectData);
+            results.created++;
+          }
+
+          batchCount++;
+          if (batchCount >= maxBatchSize) {
+            await batch.commit();
+            batchCount = 0;
+          }
+        } catch (error) {
+          results.errors.push(`Error processing defect ${defect.title || defect.key}: ${error.message}`);
+        }
+      }
+
+      // Commit remaining batch
+      if (batchCount > 0) {
+        await batch.commit();
+      }
+
+      return results;
+    } catch (error) {
+      console.error('Error in importDefects:', error);
+      throw new functions.https.HttpsError('internal', `Internal error: ${error.message}`);
+    }
+  });
+
+// Scheduled purge of archived defects
+exports.purgeArchivedDefects = functions
+  .region('australia-southeast1')
+  .pubsub
+  .schedule('0 2 * * *') // Daily at 2 AM
+  .onRun(async (context) => {
+    try {
+      console.log('Starting scheduled purge of archived defects');
+      
+      // Get all organizations
+      const orgsSnapshot = await db.collection('organizations').get();
+      let totalPurged = 0;
+      
+      for (const orgDoc of orgsSnapshot.docs) {
+        const organizationId = orgDoc.id;
+        const orgData = orgDoc.data();
+        
+        // Check if org has retention policy
+        const retentionDays = orgData.settings?.retention?.defects?.daysToPurge || 60;
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
+        
+        // Find archived defects older than retention period
+        const archivedDefectsQuery = await db.collectionGroup('defects')
+          .where('organizationId', '==', organizationId)
+          .where('status', '==', 'archived')
+          .where('archivedAt', '<', cutoffDate)
+          .get();
+        
+        if (!archivedDefectsQuery.empty) {
+          const batch = writeBatch(db);
+          let batchCount = 0;
+          const maxBatchSize = 500;
+          
+          for (const defectDoc of archivedDefectsQuery.docs) {
+            const defectData = defectDoc.data();
+            
+            // Delete comments and history subcollections
+            const commentsSnapshot = await defectDoc.ref.collection('comments').get();
+            const historySnapshot = await defectDoc.ref.collection('history').get();
+            
+            commentsSnapshot.docs.forEach(doc => batch.delete(doc.ref));
+            historySnapshot.docs.forEach(doc => batch.delete(doc.ref));
+            
+            // Delete the defect document
+            batch.delete(defectDoc.ref);
+            
+            batchCount++;
+            if (batchCount >= maxBatchSize) {
+              await batch.commit();
+              batchCount = 0;
+            }
+          }
+          
+          // Commit remaining batch
+          if (batchCount > 0) {
+            await batch.commit();
+          }
+          
+          totalPurged += archivedDefectsQuery.size;
+          console.log(`Purged ${archivedDefectsQuery.size} archived defects from organization ${organizationId}`);
+        }
+      }
+      
+      console.log(`Scheduled purge completed. Total defects purged: ${totalPurged}`);
+      return { success: true, totalPurged };
+      
+    } catch (error) {
+      console.error('Error in scheduled purge:', error);
+      return { success: false, error: error.message };
     }
   });
 

@@ -132,6 +132,102 @@ service cloud.firestore {
         // Only Org Admins (scoped) can enable/disable and override
         allow create, update, delete: if isOrgAdmin(organizationId);
       }
+
+      // Defects subcollection
+      match /projects/{projectId}/defects/{defectId} {
+        allow read: if isOrgMember(organizationId) || isAppAdmin() || isOrgAdmin(organizationId);
+
+        // Create: any authenticated org member
+        allow create: if (
+          isOrgMember(organizationId) || isAppAdmin() || isOrgAdmin(organizationId)
+        ) && (
+          // Required minimal fields
+          request.resource.data.title is string &&
+          request.resource.data.description is string &&
+          request.resource.data.severity is string &&
+          request.resource.data.priority is string &&
+          request.resource.data.projectId == projectId &&
+          request.resource.data.organizationId == organizationId &&
+          // Folder ref must exist if provided
+          (
+            request.resource.data.folderId == null ||
+            exists(/databases/$(database)/documents/organizations/$(organizationId)/projects/$(projectId)/defect_folders/$(request.resource.data.folderId))
+          )
+        );
+
+        // Update: admins, project managers, or creator can update basic fields
+        // Key is system-generated and immutable after creation
+        allow update: if (
+          isAppAdmin() || isOrgAdmin(organizationId) || isProjectManager(organizationId) || (isAuthenticated() && request.auth.uid == resource.data.createdBy)
+        ) && (
+          request.resource.data.key == resource.data.key &&
+          // Enforce path consistency
+          request.resource.data.organizationId == organizationId &&
+          request.resource.data.projectId == projectId
+        );
+
+        // Delete: admins, project managers, or creator can delete (soft delete to Archived)
+        allow delete: if isAppAdmin() || isOrgAdmin(organizationId) || isProjectManager(organizationId) || (isAuthenticated() && request.auth.uid == resource.data.createdBy);
+
+        // Comments subcollection
+        match /comments/{commentId} {
+          allow read: if isOrgMember(organizationId) || isAppAdmin() || isOrgAdmin(organizationId);
+          allow create: if isOrgMember(organizationId) || isAppAdmin() || isOrgAdmin(organizationId);
+          allow update, delete: if isAppAdmin() || isOrgAdmin(organizationId) || isProjectManager(organizationId) || (isAuthenticated() && request.auth.uid == resource.data.createdBy);
+        }
+
+        // History subcollection (write-only by server)
+        match /history/{eventId} {
+          allow read: if isOrgMember(organizationId) || isAppAdmin() || isOrgAdmin(organizationId);
+          allow create, update, delete: if false; // Server-only writes
+        }
+      }
+
+      // Defect folders subcollection
+      match /projects/{projectId}/defect_folders/{folderId} {
+        allow read: if isOrgMember(organizationId) || isAppAdmin() || isOrgAdmin(organizationId);
+        // Create/Update: org members; Delete: admins only
+        allow create, update: if isOrgMember(organizationId) || isAppAdmin() || isOrgAdmin(organizationId);
+        allow delete: if isAppAdmin() || isOrgAdmin(organizationId);
+      }
+
+      // Reference values for defects (status, severity, priority, etc.)
+      match /ref_values/{refType} {
+        allow read: if isOrgMember(organizationId) || isAppAdmin() || isOrgAdmin(organizationId);
+        // Only Org Admins can override reference values
+        allow create, update, delete: if isOrgAdmin(organizationId);
+        
+        // Allow Cloud Functions to write to values subcollection
+        match /values/{valueId} {
+          allow read: if isOrgMember(organizationId) || isAppAdmin() || isOrgAdmin(organizationId);
+          allow create, update, delete: if isOrgAdmin(organizationId);
+        }
+      }
+
+      // Tag catalog for defects
+      match /tag_catalog/{tagSlug} {
+        allow read: if isOrgMember(organizationId) || isAppAdmin() || isOrgAdmin(organizationId);
+        allow create, update, delete: if isOrgAdmin(organizationId);
+      }
+    }
+
+    // Counters collection for sequential keys
+    match /counters/{counterId} {
+      allow read: if isOrgMember(counterId) || isAppAdmin();
+      allow create, update: if isAppAdmin() || isOrgAdmin(counterId);
+      
+      // Project-specific counters
+      match /projects/{projectId} {
+        allow read: if isOrgMember(counterId) || isAppAdmin();
+        allow create, update: if isAppAdmin() || isOrgAdmin(counterId);
+      }
+    }
+
+    // Collection group for cross-project defect queries
+    match /defects/{defectId} {
+      allow read: if isAuthenticated() && 
+        resource.data.organizationId != null &&
+        exists(/databases/$(database)/documents/organizations/$(resource.data.organizationId)/users/$(request.auth.uid));
     }
   }
 }

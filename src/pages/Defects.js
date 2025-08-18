@@ -1,7 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import DefectsGrid from '../components/DefectsGrid';
- 
+import { defectService } from '../services/defectService';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from '../services/firebase';
+import RichTextEditor from '../components/common/RichTextEditor';
+import RichTextViewer from '../components/common/RichTextViewer';
+import { getUsersByOrganization } from '../services/userService';
+import { useToast } from '../components/Toast';
+
+
  
 import { 
   Plus, 
@@ -20,128 +28,22 @@ const Defects = () => {
   const [showViewDefectModal, setShowViewDefectModal] = useState(false);
   const [showEditDefectModal, setShowEditDefectModal] = useState(false);
   const [selectedDefect, setSelectedDefect] = useState(null);
-  const { getProjects } = useAuth();
+  const { getProjects, user, currentOrganization } = useAuth();
   const [projectsList, setProjectsList] = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState('all');
-  const [defects, setDefects] = useState([
-    {
-      id: 'DEF-001',
-      title: 'Payment Gateway Timeout Error',
-      description: 'Users experiencing timeout errors when processing payments through the gateway. The issue occurs specifically when users attempt to complete transactions with certain payment methods. This is causing a significant impact on our conversion rates.',
-      status: 'Open',
-      severity: 'High',
-      priority: 'Critical',
-      reporter: 'John Doe',
-      assignedTo: 'Jane Smith',
-      project: 'E-Commerce Platform',
-      module: 'Payment System',
-      createdDate: '2024-01-15',
-      updatedDate: '2024-01-16',
-      attachments: 2,
-      comments: 5,
-      stepsToReproduce: '1. Navigate to checkout page\n2. Select credit card payment\n3. Enter valid card details\n4. Click "Complete Purchase"\n5. Wait for timeout error',
-      expectedBehavior: 'Payment should process successfully and redirect to confirmation page',
-      actualBehavior: 'Payment times out after 30 seconds with error message',
-      environment: 'Production - Chrome 120.0.6099.109',
-      browser: 'Chrome',
-      os: 'Windows 11',
-      tags: ['api', 'regression']
-    },
-    {
-      id: 'DEF-002',
-      title: 'User Profile Image Not Loading',
-      description: 'Profile images are not displaying correctly in the user dashboard. Users are seeing broken image icons instead of their uploaded profile pictures.',
-      status: 'In Progress',
-      severity: 'Medium',
-      priority: 'Medium',
-      reporter: 'Sarah Wilson',
-      assignedTo: 'Mike Johnson',
-      project: 'E-Commerce Platform',
-      module: 'User Management',
-      createdDate: '2024-01-14',
-      updatedDate: '2024-01-15',
-      attachments: 1,
-      comments: 3,
-      stepsToReproduce: '1. Login to user account\n2. Navigate to profile settings\n3. Upload profile image\n4. Save changes\n5. View profile in dashboard',
-      expectedBehavior: 'Profile image should display correctly in dashboard',
-      actualBehavior: 'Broken image icon appears instead of profile picture',
-      environment: 'Staging - Firefox 121.0',
-      browser: 'Firefox',
-      os: 'macOS 14.1',
-      tags: ['ui']
-    },
-    {
-      id: 'DEF-003',
-      title: 'Search Results Pagination Issue',
-      description: 'Pagination controls not working correctly in product search results. Users cannot navigate to subsequent pages of search results.',
-      status: 'Resolved',
-      severity: 'Low',
-      priority: 'Low',
-      reporter: 'Alex Brown',
-      assignedTo: 'David Lee',
-      project: 'E-Commerce Platform',
-      module: 'Product Catalog',
-      createdDate: '2024-01-13',
-      updatedDate: '2024-01-14',
-      attachments: 0,
-      comments: 2,
-      stepsToReproduce: '1. Search for products\n2. View search results\n3. Click on page 2 or next button',
-      expectedBehavior: 'Should navigate to next page of results',
-      actualBehavior: 'Page remains on first page of results',
-      environment: 'Production - Safari 17.1',
-      browser: 'Safari',
-      os: 'iOS 17.1',
-      tags: []
-    },
-    {
-      id: 'DEF-004',
-      title: 'Mobile Responsive Layout Broken',
-      description: 'Layout issues on mobile devices, particularly on product detail pages. Content is overlapping and buttons are not properly aligned.',
-      status: 'Open',
-      severity: 'High',
-      priority: 'High',
-      reporter: 'Emily Davis',
-      assignedTo: 'Unassigned',
-      project: 'E-Commerce Platform',
-      module: 'Frontend',
-      createdDate: '2024-01-12',
-      updatedDate: '2024-01-12',
-      attachments: 3,
-      comments: 1,
-      stepsToReproduce: '1. Open website on mobile device\n2. Navigate to any product detail page\n3. Scroll through the page',
-      expectedBehavior: 'Layout should be properly responsive and aligned',
-      actualBehavior: 'Content overlaps and buttons are misaligned',
-      environment: 'Production - Mobile Safari',
-      browser: 'Safari Mobile',
-      os: 'iOS 17.1',
-      tags: ['ui', 'mobile']
-    }
-  ]);
+  const [defects, setDefects] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [referenceValues, setReferenceValues] = useState({
+    status: [],
+    severity: [],
+    priority: [],
+    reproducibility: [],
+    resolution: []
+  });
+  const [organizationUsers, setOrganizationUsers] = useState([]);
+  const { push } = useToast() || { push: () => {} };
 
-  // Global tags (mock) and filter
-  const [availableTags, setAvailableTags] = useState([
-    { id: 'ui', name: 'UI', color: '#0ea5e9' },
-    { id: 'api', name: 'API', color: '#10b981' },
-    { id: 'regression', name: 'Regression', color: '#f59e0b' },
-    { id: 'security', name: 'Security', color: '#ef4444' },
-    { id: 'mobile', name: 'Mobile', color: '#8b5cf6' },
-  ]);
-  const [selectedTagFilterIds, setSelectedTagFilterIds] = useState([]);
 
-  const resolveTags = (tagIds) => {
-    if (!Array.isArray(tagIds)) return [];
-    const map = new Map(availableTags.map(t => [t.id, t]));
-    return tagIds.map(id => map.get(id)).filter(Boolean);
-  };
-  const addOrUpdateTag = (tag) => {
-    setAvailableTags(prev => {
-      const exists = prev.some(t => t.id === tag.id);
-      return exists ? prev.map(t => (t.id === tag.id ? tag : t)) : [...prev, tag];
-    });
-  };
-  const toggleFilterTag = (tagId) => {
-    setSelectedTagFilterIds(prev => prev.includes(tagId) ? prev.filter(id => id !== tagId) : [...prev, tagId]);
-  };
 
   const [newDefectForm, setNewDefectForm] = useState({
     title: '',
@@ -151,13 +53,13 @@ const Defects = () => {
     project: '',
     module: '',
     assignedTo: '',
+    raisedBy: '',
     stepsToReproduce: '',
     expectedBehavior: '',
     actualBehavior: '',
     environment: '',
     browser: '',
-    os: '',
-    tags: []
+    operatingSystem: ''
   });
 
   const [editDefectForm, setEditDefectForm] = useState({
@@ -169,13 +71,13 @@ const Defects = () => {
     project: '',
     module: '',
     assignedTo: '',
+    raisedBy: '',
     stepsToReproduce: '',
     expectedBehavior: '',
     actualBehavior: '',
     environment: '',
     browser: '',
-    os: '',
-    tags: []
+    operatingSystem: ''
   });
 
   // Load accessible projects for selector (future filtering)
@@ -194,26 +96,154 @@ const Defects = () => {
     return () => { active = false; };
   }, [getProjects]);
 
+  // Initialize reference values if they don't exist
+  const initializeReferenceValues = async () => {
+    if (!currentOrganization?.id) return;
+    
+    try {
+      const initializeFunction = httpsCallable(functions, 'initializeDefectReferenceValues');
+      await initializeFunction({ organizationId: currentOrganization.id });
+      
+      // Reload reference values
+      const [statusValues, severityValues, priorityValues, reproducibilityValues, resolutionValues] = await Promise.all([
+        defectService.getReferenceValues(currentOrganization.id, 'defect_status'),
+        defectService.getReferenceValues(currentOrganization.id, 'defect_severity'),
+        defectService.getReferenceValues(currentOrganization.id, 'defect_priority'),
+        defectService.getReferenceValues(currentOrganization.id, 'defect_reproducibility'),
+        defectService.getReferenceValues(currentOrganization.id, 'defect_resolution')
+      ]);
+
+      setReferenceValues({
+        status: statusValues,
+        severity: severityValues,
+        priority: priorityValues,
+        reproducibility: reproducibilityValues,
+        resolution: resolutionValues
+      });
+    } catch (error) {
+      console.error('Error initializing reference values:', error);
+    }
+  };
+
+  // Load defects and reference values
+  useEffect(() => {
+    let active = true;
+    
+    const loadData = async () => {
+      if (!currentOrganization?.id) return;
+      
+      try {
+        setLoading(true);
+        
+        // Load reference values
+        const [statusValues, severityValues, priorityValues, reproducibilityValues, resolutionValues] = await Promise.all([
+          defectService.getReferenceValues(currentOrganization.id, 'defect_status'),
+          defectService.getReferenceValues(currentOrganization.id, 'defect_severity'),
+          defectService.getReferenceValues(currentOrganization.id, 'defect_priority'),
+          defectService.getReferenceValues(currentOrganization.id, 'defect_reproducibility'),
+          defectService.getReferenceValues(currentOrganization.id, 'defect_resolution')
+        ]);
+
+        // If no reference values exist, initialize them
+        if (statusValues.length === 0) {
+          await initializeReferenceValues();
+          
+          // Reload reference values after initialization
+          const [newStatusValues, newSeverityValues, newPriorityValues, newReproducibilityValues, newResolutionValues] = await Promise.all([
+            defectService.getReferenceValues(currentOrganization.id, 'defect_status'),
+            defectService.getReferenceValues(currentOrganization.id, 'defect_severity'),
+            defectService.getReferenceValues(currentOrganization.id, 'defect_priority'),
+            defectService.getReferenceValues(currentOrganization.id, 'defect_reproducibility'),
+            defectService.getReferenceValues(currentOrganization.id, 'defect_resolution')
+          ]);
+          
+          if (active) {
+            setReferenceValues({
+              status: newStatusValues,
+              severity: newSeverityValues,
+              priority: newPriorityValues,
+              reproducibility: newReproducibilityValues,
+              resolution: newResolutionValues
+            });
+          }
+        } else if (active) {
+          setReferenceValues({
+            status: statusValues,
+            severity: severityValues,
+            priority: priorityValues,
+            reproducibility: reproducibilityValues,
+            resolution: resolutionValues
+          });
+        }
+
+        // Load organization users
+        const users = await getUsersByOrganization(currentOrganization.id);
+        if (active) {
+          setOrganizationUsers(users);
+        }
+
+        // Load defects for all projects
+        const allDefects = await defectService.getAllDefects(currentOrganization.id);
+        
+        // Map project names and user names to defects
+        const defectsWithResolvedNames = allDefects.map(defect => {
+          const project = projectsList.find(p => p.id === defect.projectId);
+          const assignedUser = organizationUsers.find(u => u.id === defect.assignedTo);
+          const raisedByUser = organizationUsers.find(u => u.id === defect.raisedBy) || 
+                               organizationUsers.find(u => u.id === defect.reporterId) ||
+                               organizationUsers.find(u => u.id === defect.reporter);
+          
+          return {
+            ...defect,
+            projectName: project?.name || project?.projectName || defect.projectId,
+            assignedToName: assignedUser?.displayName || assignedUser?.email || assignedUser?.name || defect.assignedTo || 'Unassigned',
+            raisedByName: raisedByUser?.displayName || raisedByUser?.email || raisedByUser?.name || defect.raisedBy || defect.reporterId || defect.reporter || 'Unknown'
+          };
+        });
+        
+        if (active) {
+          setDefects(defectsWithResolvedNames);
+        }
+      } catch (error) {
+        console.error('Error loading defects data:', error);
+        if (active) {
+          setDefects([]);
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadData();
+    return () => { active = false; };
+  }, [currentOrganization?.id, projectsList]);
+
   const statusColors = {
-    Open: 'bg-red-900/20 text-red-400',
-    'In Progress': 'bg-amber-900/20 text-amber-300',
-    Resolved: 'bg-green-900/20 text-green-400',
-    Closed: 'bg-white/5 text-menu',
-    'On Hold': 'bg-purple-900/20 text-purple-300',
+    open: 'bg-red-900/20 text-red-400',
+    in_progress: 'bg-amber-900/20 text-amber-300',
+    in_review: 'bg-blue-900/20 text-blue-300',
+    blocked: 'bg-purple-900/20 text-purple-300',
+    resolved: 'bg-green-900/20 text-green-400',
+    verified: 'bg-emerald-900/20 text-emerald-400',
+    closed: 'bg-white/5 text-menu',
+    archived: 'bg-gray-900/20 text-gray-400',
   };
 
   const severityColors = {
-    Critical: 'bg-red-900/20 text-red-400',
-    High: 'bg-red-900/20 text-red-400',
-    Medium: 'bg-orange-900/20 text-orange-300',
-    Low: 'bg-green-900/20 text-green-400',
+    critical: 'bg-red-900/20 text-red-400',
+    high: 'bg-red-900/20 text-red-400',
+    medium: 'bg-orange-900/20 text-orange-300',
+    low: 'bg-green-900/20 text-green-400',
+    trivial: 'bg-gray-900/20 text-gray-400',
   };
 
   const priorityColors = {
-    Critical: 'bg-red-900/20 text-red-400',
-    High: 'bg-red-900/20 text-red-400',
-    Medium: 'bg-orange-900/20 text-orange-300',
-    Low: 'bg-green-900/20 text-green-400',
+    p0: 'bg-red-900/20 text-red-400',
+    p1: 'bg-red-900/20 text-red-400',
+    p2: 'bg-orange-900/20 text-orange-300',
+    p3: 'bg-green-900/20 text-green-400',
   };
 
   // Handler functions
@@ -230,80 +260,184 @@ const Defects = () => {
       status: defect.status,
       severity: defect.severity,
       priority: defect.priority,
-      project: defect.project,
-      module: defect.module,
+      project: defect.projectId || defect.project,
+      module: defect.folderId || defect.module,
       assignedTo: defect.assignedTo,
+      raisedBy: defect.raisedBy || defect.reporterId || defect.reporter || '',
       stepsToReproduce: defect.stepsToReproduce || '',
       expectedBehavior: defect.expectedBehavior || '',
       actualBehavior: defect.actualBehavior || '',
       environment: defect.environment || '',
       browser: defect.browser || '',
-      os: defect.os || '',
-      tags: Array.isArray(defect.tags) ? [...defect.tags] : []
+      operatingSystem: defect.operatingSystem || defect.os || ''
     });
     setShowEditDefectModal(true);
   };
 
-  const handleDeleteDefect = (defect) => {
+  const handleDeleteDefect = async (defect) => {
     if (window.confirm(`Are you sure you want to delete defect "${defect.title}"?`)) {
-      setDefects(prev => prev.filter(d => d.id !== defect.id));
+      try {
+        await defectService.deleteDefect(
+          currentOrganization.id,
+          defect.projectId,
+          defect.id
+        );
+        
+        // Show success toast
+        push({
+          variant: 'success',
+          message: `Defect deleted successfully!`,
+          duration: 5000
+        });
+        
+        // Remove from local state
+        setDefects(prev => prev.filter(d => d.id !== defect.id));
+      } catch (error) {
+        console.error('Error deleting defect:', error);
+        push({
+          variant: 'error',
+          message: `Failed to delete defect: ${error.message}`,
+          duration: 5000
+        });
+      }
     }
   };
 
-  const handleNewDefectSubmit = (e) => {
+  const handleNewDefectSubmit = async (e) => {
     e.preventDefault();
-    const newDefect = {
-      id: `DEF-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`,
-      ...newDefectForm,
-      status: 'Open',
-      reporter: 'Current User',
-      createdDate: new Date().toISOString().split('T')[0],
-      updatedDate: new Date().toISOString().split('T')[0],
-      attachments: 0,
-      comments: 0,
-      tags: [...newDefectForm.tags]
-    };
     
-    setDefects(prev => [newDefect, ...prev]);
-    setNewDefectForm({
-      title: '',
-      description: '',
-      severity: '',
-      priority: '',
-      project: '',
-      module: '',
-      assignedTo: '',
-      stepsToReproduce: '',
-      expectedBehavior: '',
-      actualBehavior: '',
-      environment: '',
-      browser: '',
-      os: '',
-      tags: []
-    });
-    setShowNewDefectModal(false);
+    if (!currentOrganization?.id || !newDefectForm.project) {
+      alert('Please select a project');
+      return;
+    }
+
+    try {
+      const payload = {
+        title: newDefectForm.title,
+        description: newDefectForm.description,
+        severity: newDefectForm.severity,
+        priority: newDefectForm.priority,
+        projectId: newDefectForm.project,
+        folderId: newDefectForm.module || null,
+        assignedTo: newDefectForm.assignedTo || null,
+        raisedBy: newDefectForm.raisedBy || user?.displayName || user?.email || '',
+        environment: newDefectForm.environment || null,
+        browser: newDefectForm.browser || null,
+        operatingSystem: newDefectForm.operatingSystem || null,
+        stepsToReproduce: newDefectForm.stepsToReproduce || null,
+        expectedBehavior: newDefectForm.expectedBehavior || null,
+        actualBehavior: newDefectForm.actualBehavior || null
+      };
+
+      const newDefect = await defectService.createDefect(currentOrganization.id, newDefectForm.project, payload);
+      
+      // Show success toast
+      push({
+        variant: 'success',
+        message: `Defect ${newDefect.key} created successfully!`,
+        duration: 5000
+      });
+      
+      // Add the new defect to the list
+      setDefects(prev => [newDefect, ...prev]);
+      
+      // Reset form
+      setNewDefectForm({
+        title: '',
+        description: '',
+        severity: '',
+        priority: '',
+        project: '',
+        module: '',
+        assignedTo: '',
+        raisedBy: user?.displayName || user?.email || user?.name || '',
+        stepsToReproduce: '',
+        expectedBehavior: '',
+        actualBehavior: '',
+        environment: '',
+        browser: '',
+        operatingSystem: ''
+      });
+      setShowNewDefectModal(false);
+    } catch (error) {
+      console.error('Error creating defect:', error);
+      push({
+        variant: 'error',
+        message: `Failed to create defect: ${error.message}`,
+        duration: 5000
+      });
+    }
   };
 
-  const handleEditDefectSubmit = (e) => {
+  const handleEditDefectSubmit = async (e) => {
     e.preventDefault();
-    const updatedDefect = {
-      ...selectedDefect,
-      ...editDefectForm,
-      updatedDate: new Date().toISOString().split('T')[0],
-      tags: [...editDefectForm.tags]
-    };
     
-    setDefects(prev => prev.map(d => d.id === selectedDefect.id ? updatedDefect : d));
-    setShowEditDefectModal(false);
+    if (!currentOrganization?.id || !editDefectForm.project) {
+      alert('Please select a project');
+      return;
+    }
+
+    try {
+      const updates = {
+        title: editDefectForm.title,
+        description: editDefectForm.description,
+        status: editDefectForm.status,
+        severity: editDefectForm.severity,
+        priority: editDefectForm.priority,
+        assignedTo: editDefectForm.assignedTo || null,
+        raisedBy: editDefectForm.raisedBy || null,
+        folderId: editDefectForm.module || null,
+        environment: editDefectForm.environment || null,
+        browser: editDefectForm.browser || null,
+        operatingSystem: editDefectForm.operatingSystem || null,
+        stepsToReproduce: editDefectForm.stepsToReproduce || null,
+        expectedBehavior: editDefectForm.expectedBehavior || null,
+        actualBehavior: editDefectForm.actualBehavior || null,
+        updatedBy: user?.uid || null
+      };
+
+      await defectService.updateDefect(
+        currentOrganization.id, 
+        editDefectForm.project, 
+        selectedDefect.id, 
+        updates
+      );
+      
+      // Show success toast
+      push({
+        variant: 'success',
+        message: `Defect updated successfully!`,
+        duration: 5000
+      });
+      
+      // Update the defect in the local state
+      setDefects(prev => prev.map(d => d.id === selectedDefect.id ? {
+        ...d,
+        ...updates,
+        projectId: editDefectForm.project,
+        folderId: editDefectForm.module
+      } : d));
+      
+      setShowEditDefectModal(false);
+    } catch (error) {
+      console.error('Error updating defect:', error);
+      push({
+        variant: 'error',
+        message: `Failed to update defect: ${error.message}`,
+        duration: 5000
+      });
+    }
   };
 
-  // Filter defects by selected tags (OR-based)
+  // Filter defects by project
   const getFilteredDefects = () => {
     let rows = defects;
-    if (selectedTagFilterIds.length > 0) {
-      const setIds = new Set(selectedTagFilterIds);
-      rows = rows.filter(d => Array.isArray(d.tags) && d.tags.some(id => setIds.has(id)));
+    
+    // Filter by project
+    if (selectedProjectId !== 'all') {
+      rows = rows.filter(d => d.projectId === selectedProjectId);
     }
+    
     return rows;
   };
 
@@ -333,9 +467,28 @@ const Defects = () => {
           </select>
           <ExportMenu
             label="Export"
-            getRows={() => getFilteredDefects().map(d => ({ ...d, Tags: resolveTags(d.tags).map(t => t.name).join(', ') }))}
+            getRows={() => getFilteredDefects().map(d => ({ 
+              ...d, 
+              Key: d.key || d.id,
+              Project: d.projectName || d.projectId || d.project,
+              Module: d.folderId || d.module,
+              RaisedBy: d.raisedBy || d.reporterId || d.reporter || 'Unknown',
+              AssignedTo: d.assignedTo || 'Unassigned',
+              Created: d.createdAt ? (d.createdAt.toDate ? d.createdAt.toDate().toISOString() : new Date(d.createdAt).toISOString()) : d.createdDate,
+              Updated: d.updatedAt ? (d.updatedAt.toDate ? d.updatedAt.toDate().toISOString() : new Date(d.updatedAt).toISOString()) : d.updatedDate,
+
+            }))}
             filenamePrefix="defects"
           />
+          {referenceValues.status.length === 0 && (
+            <button 
+              className="flex items-center space-x-2 px-3 py-2 btn-secondary whitespace-nowrap mr-2"
+              onClick={initializeReferenceValues}
+              title="Initialize default reference values"
+            >
+              <span>Initialize Values</span>
+            </button>
+          )}
           <button 
             className="flex items-center space-x-2 px-4 py-2 btn-primary whitespace-nowrap"
             onClick={() => setShowNewDefectModal(true)}
@@ -346,50 +499,26 @@ const Defects = () => {
         </div>
       </div>
 
-      {/* Tag filter chips container (below header) */}
-      <div className="card p-3 -mt-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm text-menu">Filter by tags:</span>
-          {availableTags.map(tag => (
-            <button
-              key={tag.id}
-              type="button"
-              onClick={() => toggleFilterTag(tag.id)}
-              className={`rounded-full px-2 py-1 text-xs border transition-colors ${selectedTagFilterIds.includes(tag.id) ? 'text-white' : 'text-white/80'}`}
-              style={{ backgroundColor: selectedTagFilterIds.includes(tag.id) ? tag.color : 'transparent', borderColor: tag.color }}
-              title={`Filter by ${tag.name}`}
-            >
-              {tag.name}
-            </button>
-          ))}
-          {selectedTagFilterIds.length > 0 && (
-            <button
-              type="button"
-              className="ml-2 text-xs btn-secondary"
-              onClick={() => setSelectedTagFilterIds([])}
-              title="Clear tag filters"
-            >
-              Clear
-            </button>
-          )}
-        </div>
-      </div>
+
 
       {/* Defects Grid */}
-      {getFilteredDefects().length > 0 ? (
+      {loading ? (
+        <div className="card text-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <h3 className="text-lg font-medium text-foreground mb-2">Loading defects...</h3>
+        </div>
+      ) : getFilteredDefects().length > 0 ? (
         <DefectsGrid 
           defects={getFilteredDefects()}
           onViewDefect={handleViewDefect}
           onEditDefect={handleEditDefect}
           onDeleteDefect={handleDeleteDefect}
-          resolveTags={resolveTags}
-          onFilterByTag={(id) => toggleFilterTag(id)}
         />
       ) : (
         <div className="card text-center py-12">
           <AlertTriangle className="w-12 h-12 text-menu mx-auto mb-4" />
           <h3 className="text-lg font-medium text-foreground mb-2">No defects found</h3>
-          <p className="text-menu">Try adjusting your filters.</p>
+          <p className="text-menu">Try adjusting your filters or create your first defect.</p>
         </div>
       )}
 
@@ -430,15 +559,33 @@ const Defects = () => {
                 
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
-                    Assigned To
+                    Raised By
                   </label>
                   <input
                     type="text"
-                    placeholder="Enter assignee name"
+                    placeholder="Enter reporter name"
+                    className="input-field"
+                    value={newDefectForm.raisedBy}
+                    onChange={(e) => setNewDefectForm(prev => ({ ...prev, raisedBy: e.target.value }))}
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Assigned To
+                  </label>
+                  <select
                     className="input-field"
                     value={newDefectForm.assignedTo}
                     onChange={(e) => setNewDefectForm(prev => ({ ...prev, assignedTo: e.target.value }))}
-                  />
+                  >
+                    <option value="">Select Assignee</option>
+                    {organizationUsers.map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.name || user.displayName || user.email}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
@@ -446,13 +593,9 @@ const Defects = () => {
                 <label className="block text-sm font-medium text-foreground mb-2">
                   Description <span className="text-red-500">*</span>
                 </label>
-                <textarea
-                  placeholder="Describe the defect in detail..."
-                  rows="4"
-                  className="input-field"
+                <RichTextEditor
                   value={newDefectForm.description}
-                  onChange={(e) => setNewDefectForm(prev => ({ ...prev, description: e.target.value }))}
-                  required
+                  onChange={(html) => setNewDefectForm(prev => ({ ...prev, description: html }))}
                 />
               </div>
 
@@ -468,10 +611,11 @@ const Defects = () => {
                     required
                   >
                     <option value="">Select Severity</option>
-                    <option value="Critical">Critical</option>
-                    <option value="High">High</option>
-                    <option value="Medium">Medium</option>
-                    <option value="Low">Low</option>
+                    {referenceValues.severity.map((sev) => (
+                      <option key={sev.id} value={sev.id}>
+                        {sev.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 
@@ -486,10 +630,11 @@ const Defects = () => {
                     required
                   >
                     <option value="">Select Priority</option>
-                    <option value="Critical">Critical</option>
-                    <option value="High">High</option>
-                    <option value="Medium">Medium</option>
-                    <option value="Low">Low</option>
+                    {referenceValues.priority.map((pri) => (
+                      <option key={pri.id} value={pri.id}>
+                        {pri.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 
@@ -497,14 +642,19 @@ const Defects = () => {
                   <label className="block text-sm font-medium text-foreground mb-2">
                     Project <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="text"
-                    placeholder="Enter project name"
+                  <select
                     className="input-field"
                     value={newDefectForm.project}
                     onChange={(e) => setNewDefectForm(prev => ({ ...prev, project: e.target.value }))}
                     required
-                  />
+                  >
+                    <option value="">Select Project</option>
+                    {projectsList.map((project) => (
+                      <option key={project.id} value={project.id}>
+                        {project.name || project.projectName || project.id}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
@@ -513,11 +663,11 @@ const Defects = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
-                    Module
+                    Module/Folder
                   </label>
                   <input
                     type="text"
-                    placeholder="Enter module name"
+                    placeholder="Enter module or folder name"
                     className="input-field"
                     value={newDefectForm.module}
                     onChange={(e) => setNewDefectForm(prev => ({ ...prev, module: e.target.value }))}
@@ -560,8 +710,8 @@ const Defects = () => {
                     type="text"
                     placeholder="e.g., Windows 11, macOS, iOS"
                     className="input-field"
-                    value={newDefectForm.os}
-                    onChange={(e) => setNewDefectForm(prev => ({ ...prev, os: e.target.value }))}
+                    value={newDefectForm.operatingSystem}
+                    onChange={(e) => setNewDefectForm(prev => ({ ...prev, operatingSystem: e.target.value }))}
                   />
                 </div>
               </div>
@@ -652,7 +802,7 @@ const Defects = () => {
                   <AlertTriangle className="w-6 h-6 text-red-400" />
                 </div>
                 <div className="flex-1">
-                  <h4 className="text-lg font-semibold text-foreground">{selectedDefect.id}: {selectedDefect.title}</h4>
+                  <h4 className="text-lg font-semibold text-foreground">{selectedDefect.key || selectedDefect.id}: {selectedDefect.title}</h4>
                   <div className="flex items-center space-x-3 mt-2">
                     <span className={`text-xs px-2 py-1 rounded-full ${statusColors[selectedDefect.status]}`}>
                       {selectedDefect.status}
@@ -670,7 +820,7 @@ const Defects = () => {
               {/* Description */}
               <div>
                 <h5 className="font-semibold text-foreground mb-2">Description</h5>
-                <p className="text-menu bg-white/5 p-3 rounded-lg">{selectedDefect.description}</p>
+                <RichTextViewer html={selectedDefect.description || ''} />
               </div>
 
               {/* Details Grid */}
@@ -680,37 +830,21 @@ const Defects = () => {
                   <div className="space-y-3">
                     <div>
                       <span className="text-sm font-medium text-menu">Project:</span>
-                      <p className="text-foreground">{selectedDefect.project}</p>
+                      <p className="text-foreground">{selectedDefect.projectName || selectedDefect.projectId || selectedDefect.project}</p>
                     </div>
                     <div>
                       <span className="text-sm font-medium text-menu">Module:</span>
-                      <p className="text-foreground">{selectedDefect.module}</p>
+                      <p className="text-foreground">{selectedDefect.folderId || selectedDefect.module || 'Not specified'}</p>
                     </div>
                     <div>
-                      <span className="text-sm font-medium text-menu">Reporter:</span>
-                      <p className="text-foreground">{selectedDefect.reporter}</p>
+                      <span className="text-sm font-medium text-menu">Raised By:</span>
+                      <p className="text-foreground">{selectedDefect.raisedBy || selectedDefect.reporterId || selectedDefect.reporter || 'Unknown'}</p>
                     </div>
                     <div>
                       <span className="text-sm font-medium text-menu">Assigned To:</span>
-                      <p className="text-foreground">{selectedDefect.assignedTo}</p>
+                      <p className="text-foreground">{selectedDefect.assignedTo || 'Unassigned'}</p>
                     </div>
-                    {/* Tags (view-only) */}
-                    {Array.isArray(selectedDefect.tags) && selectedDefect.tags.length > 0 && (
-                      <div>
-                        <span className="text-sm font-medium text-menu">Tags:</span>
-                        <div className="mt-1 flex flex-wrap gap-1">
-                          {resolveTags(selectedDefect.tags).map(tag => (
-                            <span
-                              key={tag.id}
-                              className="rounded-full text-white text-xs px-2 py-0.5"
-                              style={{ backgroundColor: tag.color || '#64748b' }}
-                            >
-                              {tag.name}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+
                   </div>
                 </div>
                 
@@ -727,11 +861,11 @@ const Defects = () => {
                     </div>
                     <div>
                       <span className="text-sm font-medium text-menu">OS:</span>
-                      <p className="text-foreground">{selectedDefect.os || 'Not specified'}</p>
+                      <p className="text-foreground">{selectedDefect.operatingSystem || selectedDefect.os || 'Not specified'}</p>
                     </div>
                     <div>
                       <span className="text-sm font-medium text-menu">Created:</span>
-                      <p className="text-foreground">{selectedDefect.createdDate}</p>
+                      <p className="text-foreground">{selectedDefect.createdAt ? (selectedDefect.createdAt.toDate ? selectedDefect.createdAt.toDate().toLocaleDateString() : new Date(selectedDefect.createdAt).toLocaleDateString()) : selectedDefect.createdDate || 'Unknown'}</p>
                     </div>
                   </div>
                 </div>
@@ -777,7 +911,7 @@ const Defects = () => {
                 )}
                 <div className="flex items-center space-x-1">
                   <Clock className="w-4 h-4" />
-                  <span>Updated: {selectedDefect.updatedDate}</span>
+                  <span>Updated: {selectedDefect.updatedAt ? (selectedDefect.updatedAt.toDate ? selectedDefect.updatedAt.toDate().toLocaleDateString() : new Date(selectedDefect.updatedAt).toLocaleDateString()) : selectedDefect.updatedDate || 'Unknown'}</span>
                 </div>
               </div>
             </div>
@@ -829,11 +963,12 @@ const Defects = () => {
                     value={editDefectForm.status}
                     onChange={(e) => setEditDefectForm(prev => ({ ...prev, status: e.target.value }))}
                   >
-                    <option value="Open">Open</option>
-                    <option value="In Progress">In Progress</option>
-                    <option value="Resolved">Resolved</option>
-                    <option value="Closed">Closed</option>
-                    <option value="On Hold">On Hold</option>
+                    <option value="">Select Status</option>
+                    {referenceValues.status.map((status) => (
+                      <option key={status.id} value={status.id}>
+                        {status.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -842,13 +977,9 @@ const Defects = () => {
                 <label className="block text-sm font-medium text-foreground mb-2">
                   Description <span className="text-red-500">*</span>
                 </label>
-                <textarea
-                  placeholder="Describe the defect in detail..."
-                  rows="4"
-                  className="input-field"
+                <RichTextEditor
                   value={editDefectForm.description}
-                  onChange={(e) => setEditDefectForm(prev => ({ ...prev, description: e.target.value }))}
-                  required
+                  onChange={(html) => setEditDefectForm(prev => ({ ...prev, description: html }))}
                 />
               </div>
 
@@ -862,10 +993,12 @@ const Defects = () => {
                     value={editDefectForm.severity}
                     onChange={(e) => setEditDefectForm(prev => ({ ...prev, severity: e.target.value }))}
                   >
-                    <option value="Critical">Critical</option>
-                    <option value="High">High</option>
-                    <option value="Medium">Medium</option>
-                    <option value="Low">Low</option>
+                    <option value="">Select Severity</option>
+                    {referenceValues.severity.map((sev) => (
+                      <option key={sev.id} value={sev.id}>
+                        {sev.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 
@@ -878,10 +1011,12 @@ const Defects = () => {
                     value={editDefectForm.priority}
                     onChange={(e) => setEditDefectForm(prev => ({ ...prev, priority: e.target.value }))}
                   >
-                    <option value="Critical">Critical</option>
-                    <option value="High">High</option>
-                    <option value="Medium">Medium</option>
-                    <option value="Low">Low</option>
+                    <option value="">Select Priority</option>
+                    {referenceValues.priority.map((pri) => (
+                      <option key={pri.id} value={pri.id}>
+                        {pri.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 
@@ -889,13 +1024,18 @@ const Defects = () => {
                   <label className="block text-sm font-medium text-foreground mb-2">
                     Assigned To
                   </label>
-                  <input
-                    type="text"
-                    placeholder="Enter assignee name"
+                  <select
                     className="input-field"
                     value={editDefectForm.assignedTo}
                     onChange={(e) => setEditDefectForm(prev => ({ ...prev, assignedTo: e.target.value }))}
-                  />
+                  >
+                    <option value="">Select Assignee</option>
+                    {organizationUsers.map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.name || user.displayName || user.email}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
@@ -906,22 +1046,40 @@ const Defects = () => {
                   <label className="block text-sm font-medium text-foreground mb-2">
                     Project
                   </label>
-                  <input
-                    type="text"
-                    placeholder="Enter project name"
+                  <select
                     className="input-field"
                     value={editDefectForm.project}
                     onChange={(e) => setEditDefectForm(prev => ({ ...prev, project: e.target.value }))}
+                  >
+                    <option value="">Select Project</option>
+                    {projectsList.map((project) => (
+                      <option key={project.id} value={project.id}>
+                        {project.name || project.projectName || project.id}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Raised By
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Enter reporter name"
+                    className="input-field"
+                    value={editDefectForm.raisedBy}
+                    onChange={(e) => setEditDefectForm(prev => ({ ...prev, raisedBy: e.target.value }))}
                   />
                 </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
-                    Module
+                    Module/Folder
                   </label>
                   <input
                     type="text"
-                    placeholder="Enter module name"
+                    placeholder="Enter module or folder name"
                     className="input-field"
                     value={editDefectForm.module}
                     onChange={(e) => setEditDefectForm(prev => ({ ...prev, module: e.target.value }))}
@@ -964,8 +1122,8 @@ const Defects = () => {
                     type="text"
                     placeholder="e.g., Windows 11, macOS"
                     className="input-field"
-                    value={editDefectForm.os}
-                    onChange={(e) => setEditDefectForm(prev => ({ ...prev, os: e.target.value }))}
+                    value={editDefectForm.operatingSystem}
+                    onChange={(e) => setEditDefectForm(prev => ({ ...prev, operatingSystem: e.target.value }))}
                   />
                 </div>
               </div>

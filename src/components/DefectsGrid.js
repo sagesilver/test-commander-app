@@ -14,41 +14,42 @@ import {
   Trash2
 } from 'lucide-react';
 
-const DefectsGrid = ({ defects, onViewDefect, onEditDefect, onDeleteDefect, resolveTags, onFilterByTag }) => {
+const DefectsGrid = ({ defects, onViewDefect, onEditDefect, onDeleteDefect }) => {
   
   // Transform defects data for the grid
   const gridData = useMemo(() => {
     return defects.map((defect) => {
       return ({
         id: defect.id,
+        key: defect.key,
         title: defect.title,
         description: defect.description,
         status: defect.status,
         severity: defect.severity,
         priority: defect.priority,
-        reporter: defect.reporter,
-        assignedTo: defect.assignedTo,
-        project: defect.project,
-        module: defect.module,
-        createdDate: defect.createdDate,
-        updatedDate: defect.updatedDate,
-        attachments: defect.attachments,
-        comments: defect.comments,
+        raisedBy: defect.raisedByName || defect.raisedBy || defect.reporterId || defect.reporter || 'Unknown',
+        assignedTo: defect.assignedToName || defect.assignedTo || 'Unassigned',
+        project: defect.projectName || defect.projectId,
+        module: defect.folderId,
+        createdDate: defect.createdAt,
+        updatedDate: defect.updatedAt,
+        attachments: defect.attachmentCount || 0,
+        comments: defect.commentCount || 0,
         environment: defect.environment,
         browser: defect.browser,
-        os: defect.os,
+        os: defect.operatingSystem,
         // Store original data for actions
         originalData: defect
       });
     });
-  }, [defects, resolveTags]);
+  }, [defects]);
 
   // Column definitions matching TestCasesGrid look & feel
   const columns = [
     {
-      id: 'id',
+      id: 'key',
       header: 'Defect ID',
-      accessorKey: 'id',
+      accessorKey: 'key',
       size: 150,
       cell: ({ getValue }) => (
         <span className="inline-flex items-center px-2 py-1 rounded-full text-sm font-medium bg-[rgb(var(--tc-icon))]/20 text-[rgb(var(--tc-contrast))]">{getValue()}</span>
@@ -72,34 +73,54 @@ const DefectsGrid = ({ defects, onViewDefect, onEditDefect, onDeleteDefect, reso
       size: 130,
       cell: ({ getValue }) => {
         const config = {
-          'Open': {
+          'open': {
             classes: 'bg-red-900/20 text-red-400',
-            icon: '○'
+            icon: '○',
+            label: 'Open'
           },
-          'In Progress': {
+          'in_progress': {
             classes: 'bg-amber-900/20 text-amber-300',
-            icon: '⟳'
+            icon: '⟳',
+            label: 'In Progress'
           },
-          'Resolved': {
-            classes: 'bg-green-900/20 text-green-400',
-            icon: '✓'
+          'in_review': {
+            classes: 'bg-blue-900/20 text-blue-300',
+            icon: '👁',
+            label: 'In Review'
           },
-          'Closed': {
-            classes: 'bg-white/5 text-menu',
-            icon: '✗'
-          },
-          'On Hold': {
+          'blocked': {
             classes: 'bg-purple-900/20 text-purple-300',
-            icon: '⏸'
+            icon: '🚫',
+            label: 'Blocked'
+          },
+          'resolved': {
+            classes: 'bg-green-900/20 text-green-400',
+            icon: '✓',
+            label: 'Resolved'
+          },
+          'verified': {
+            classes: 'bg-emerald-900/20 text-emerald-400',
+            icon: '✅',
+            label: 'Verified'
+          },
+          'closed': {
+            classes: 'bg-white/5 text-menu',
+            icon: '✗',
+            label: 'Closed'
+          },
+          'archived': {
+            classes: 'bg-gray-900/20 text-gray-400',
+            icon: '📁',
+            label: 'Archived'
           }
         };
         const value = getValue();
-        const style = config[value] || config['Open'];
+        const style = config[value] || config['open'];
         
         return (
           <span className={`inline-flex items-center h-7 space-x-1 px-2 rounded-full text-sm font-medium ${style.classes}`}>
             <span className="text-sm">{style.icon}</span>
-            <span>{value}</span>
+            <span>{style.label}</span>
           </span>
         );
       },
@@ -112,18 +133,19 @@ const DefectsGrid = ({ defects, onViewDefect, onEditDefect, onDeleteDefect, reso
       size: 120,
       cell: ({ getValue }) => {
         const config = {
-          'Critical': { icon: <AlertTriangle className="w-3 h-3 text-red-400" />, classes: 'bg-red-900/20 text-red-400' },
-          'High': { icon: <ArrowUp className="w-3 h-3 text-red-400" />, classes: 'bg-red-900/20 text-red-400' },
-          'Medium': { icon: <Circle className="w-3 h-3 text-orange-300" />, classes: 'bg-orange-900/20 text-orange-300' },
-          'Low': { icon: <ArrowDown className="w-3 h-3 text-green-400" />, classes: 'bg-green-900/20 text-green-400' },
+          'critical': { icon: <AlertTriangle className="w-3 h-3 text-red-400" />, classes: 'bg-red-900/20 text-red-400', label: 'Critical' },
+          'high': { icon: <ArrowUp className="w-3 h-3 text-red-400" />, classes: 'bg-red-900/20 text-red-400', label: 'High' },
+          'medium': { icon: <Circle className="w-3 h-3 text-orange-300" />, classes: 'bg-orange-900/20 text-orange-300', label: 'Medium' },
+          'low': { icon: <ArrowDown className="w-3 h-3 text-green-400" />, classes: 'bg-green-900/20 text-green-400', label: 'Low' },
+          'trivial': { icon: <Circle className="w-3 h-3 text-gray-400" />, classes: 'bg-gray-900/20 text-gray-400', label: 'Trivial' },
         };
         const value = getValue();
-        const style = config[value] || config['Medium'];
+        const style = config[value] || config['medium'];
         return (
           <div className={`h-full flex items-center`}>
             <div className={`inline-flex items-center h-7 space-x-1 px-2 rounded-full text-sm font-medium ${style.classes}`}>
               {style.icon}
-              <span>{value || 'Medium'}</span>
+              <span>{style.label}</span>
             </div>
           </div>
         );
@@ -137,19 +159,19 @@ const DefectsGrid = ({ defects, onViewDefect, onEditDefect, onDeleteDefect, reso
       size: 120,
       cell: ({ getValue }) => {
         const config = {
-          'Critical': { icon: <AlertTriangle className="w-3 h-3 text-red-400" />, classes: 'bg-red-900/20 text-red-400' },
-          'High': { icon: <ArrowUp className="w-3 h-3 text-red-400" />, classes: 'bg-red-900/20 text-red-400' },
-          'Medium': { icon: <Circle className="w-3 h-3 text-orange-300" />, classes: 'bg-orange-900/20 text-orange-300' },
-          'Low': { icon: <ArrowDown className="w-3 h-3 text-green-400" />, classes: 'bg-green-900/20 text-green-400' },
+          'p0': { icon: <AlertTriangle className="w-3 h-3 text-red-400" />, classes: 'bg-red-900/20 text-red-400', label: 'P0' },
+          'p1': { icon: <ArrowUp className="w-3 h-3 text-red-400" />, classes: 'bg-red-900/20 text-red-400', label: 'P1' },
+          'p2': { icon: <Circle className="w-3 h-3 text-orange-300" />, classes: 'bg-orange-900/20 text-orange-300', label: 'P2' },
+          'p3': { icon: <ArrowDown className="w-3 h-3 text-green-400" />, classes: 'bg-green-900/20 text-green-400', label: 'P3' },
         };
         const value = getValue();
-        const style = config[value] || config['Medium'];
+        const style = config[value] || config['p2'];
         
         return (
           <div className={`h-full flex items-center`}>
             <div className={`inline-flex items-center h-7 space-x-1 px-2 rounded-full text-sm font-medium ${style.classes}`}>
               {style.icon}
-              <span>{value}</span>
+              <span>{style.label}</span>
             </div>
           </div>
         );
@@ -184,23 +206,81 @@ const DefectsGrid = ({ defects, onViewDefect, onEditDefect, onDeleteDefect, reso
       },
       filterType: 'text',
     },
-    { id: 'project', header: 'Project', accessorKey: 'project', size: 160, cell: ({ getValue }) => (<span className="text-sm text-foreground">{getValue()}</span>), filterType: 'text' },
+    {
+      id: 'raisedBy',
+      header: 'Raised By',
+      accessorKey: 'raisedBy',
+      size: 180,
+      cell: ({ getValue }) => {
+        const colors = [
+          'from-green-600 to-emerald-500',
+          'from-blue-600 to-cyan-500',
+          'from-violet-600 to-fuchsia-500',
+          'from-orange-600 to-red-500',
+          'from-indigo-600 to-purple-500',
+        ];
+        const value = getValue();
+        const userInitials = value?.split(' ').map(n => n[0]).join('').toUpperCase() || 'UN';
+        const colorIndex = (value?.length || 0) % colors.length;
+        
+        return (
+          <div className="flex items-center space-x-2">
+            <div className={`w-6 h-6 bg-gradient-to-br ${colors[colorIndex]} rounded-full flex items-center justify-center`}>
+              <span className="text-white text-xs font-bold">{userInitials}</span>
+            </div>
+            <span className="text-sm font-medium text-foreground">{value || 'Unknown'}</span>
+          </div>
+        );
+      },
+      filterType: 'text',
+    },
+    { 
+      id: 'project', 
+      header: 'Project', 
+      accessorKey: 'project', 
+      size: 160, 
+      cell: ({ getValue, row }) => {
+        const projectId = getValue();
+        const projectName = row.original.originalData.projectName || projectId;
+        return <span className="text-sm text-foreground">{projectName || 'Unknown Project'}</span>;
+      }, 
+      filterType: 'text' 
+    },
     {
       id: 'module', header: 'Module', accessorKey: 'module', size: 140, cell: ({ getValue }) => (<span className="text-sm text-foreground">{getValue()}</span>), filterType: 'text'
     },
-    {
-      id: 'updatedDate',
-      header: 'Updated',
-      accessorKey: 'updatedDate',
-      size: 120,
-      cell: ({ getValue }) => (
-        <div className="flex items-center space-x-1">
-          <Clock className="w-3 h-3 text-menu" />
-          <span className="text-sm text-menu">{getValue()}</span>
-        </div>
-      ),
-      filterType: 'text',
-    },
+         {
+       id: 'updatedDate',
+       header: 'Updated',
+       accessorKey: 'updatedDate',
+       size: 120,
+       cell: ({ getValue }) => {
+         const timestamp = getValue();
+         let displayDate = 'Unknown';
+         
+         if (timestamp) {
+           if (timestamp && typeof timestamp.toDate === 'function') {
+             // Firestore timestamp
+             displayDate = timestamp.toDate().toLocaleDateString();
+           } else if (timestamp instanceof Date) {
+             displayDate = timestamp.toLocaleDateString();
+           } else if (typeof timestamp === 'string') {
+             displayDate = new Date(timestamp).toLocaleDateString();
+           } else if (timestamp && timestamp.seconds) {
+             // Firestore timestamp object
+             displayDate = new Date(timestamp.seconds * 1000).toLocaleDateString();
+           }
+         }
+         
+         return (
+           <div className="flex items-center space-x-1">
+             <Clock className="w-3 h-3 text-menu" />
+             <span className="text-sm text-menu">{displayDate}</span>
+           </div>
+         );
+       },
+       filterType: 'text',
+     },
     {
       id: 'comments',
       header: 'Comments',
