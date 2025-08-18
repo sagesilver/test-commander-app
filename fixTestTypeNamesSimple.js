@@ -5,16 +5,41 @@ const admin = require('firebase-admin');
 
 console.log('🔧 Fixing test type names - removing double-barreled names and trailing "Test" words...');
 
-// Initialize Firebase Admin SDK using the token from CLI
+// Initialize Firebase Admin SDK using service account or CLI token
 try {
-  admin.initializeApp({
-    credential: admin.credential.refreshToken('1//0gRbBgFneIuWwCgYIARAAGBASNwF-L9IrHg6LW0sB6B7G3sA6BCIRiDfFPp0nz40aDnNFTSeePKnxaKOUH9iOMCvdMLYcR-roChY'),
-    projectId: 'test-commander-project'
-  });
-  
-  console.log('✅ Firebase Admin SDK initialized successfully using CLI token');
+  // Try to use service account key first (recommended for production)
+  try {
+    const serviceAccount = require('./serviceAccountKey.json');
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+      projectId: 'test-commander-project'
+    });
+    console.log('✅ Firebase Admin SDK initialized using service account key');
+  } catch (serviceAccountError) {
+    // Fallback to CLI token (for development only)
+    console.log('⚠️  Service account key not found, using CLI token (development only)');
+    console.log('📋 To use service account key:');
+    console.log('1. Go to Firebase Console > Project Settings > Service Accounts');
+    console.log('2. Click "Generate New Private Key"');
+    console.log('3. Save as "serviceAccountKey.json" in this directory');
+    
+    // Use CLI token from environment variable (more secure)
+    const refreshToken = process.env.FIREBASE_REFRESH_TOKEN;
+    if (!refreshToken) {
+      throw new Error('FIREBASE_REFRESH_TOKEN environment variable not set. Please set it or use service account key.');
+    }
+    
+    admin.initializeApp({
+      credential: admin.credential.refreshToken(refreshToken),
+      projectId: 'test-commander-project'
+    });
+    console.log('✅ Firebase Admin SDK initialized using CLI token from environment');
+  }
 } catch (error) {
   console.error('❌ Failed to initialize Firebase Admin SDK:', error.message);
+  console.error('💡 Please ensure you have either:');
+  console.error('   - serviceAccountKey.json file in this directory, OR');
+  console.error('   - FIREBASE_REFRESH_TOKEN environment variable set');
   process.exit(1);
 }
 
